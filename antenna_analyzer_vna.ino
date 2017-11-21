@@ -13,7 +13,7 @@
 // 25 / 27 MHz crystals
 #define XTAL_CUSTOM_FREQ   27000000
 
-#define BANDS_CNT          14
+#define BANDS_CNT          12
 
 // analog read pins
 #define PIN_SWR_FWD        0
@@ -69,9 +69,7 @@ struct band_map_t {
   {  2490000000ULL,  2500000ULL, "12m" },
   {  2700000000ULL,  5000000ULL, "11m" },
   {  2810000000ULL,  5000000ULL, "10m" },
-  {  5010000000ULL, 10000000ULL, "6m " },
-  {  7010000000ULL, 10000000ULL, "4m " },
-  { 14500000000ULL, 25000000ULL, "2m " }
+  {  5010000000ULL, 10000000ULL, "6m " }
 };
 
 // band state

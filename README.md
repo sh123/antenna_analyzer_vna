@@ -26,7 +26,7 @@ Requirements:
  * Simple Timer library - https://github.com/jfturcot/SimpleTimer
  * Adafruit PCD8544 (from Arduino library)- https://github.com/adafruit/Adafruit-PCD8544-Nokia-5110-LCD-library
  * Adafruit GFX (from Arduino library) - https://github.com/adafruit/Adafruit-GFX-Library
- * Etherkit Si5351 (version 2+ from Arduino library) - https://github.com/etherkit/Si5351Arduino
+ * AD9850 (from Arduino library)
 
 Supported operations:
 ---------------------
