@@ -5,7 +5,7 @@
  **/
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
-#include <si5351.h>
+#include <AD9850.h>
 #include <Rotary.h>
 #include <SimpleTimer.h>
 #include "Wire.h"
@@ -43,7 +43,7 @@
 #define FREQ_MAX           20000000000ULL
 #define FREQ_DELAY_MS      5
 
-#define TO_KHZ(freq)       (freq / (1000ULL * SI5351_FREQ_MULT))
+#define TO_KHZ(freq)       (freq / (1000ULL * 1))
 #define VALID_RANGE(freq)  (freq < FREQ_MAX && !(freq > 14810000000ULL && freq < 15000000000ULL))
 
 enum MAIN_SCREEN_STATE {
@@ -86,7 +86,7 @@ bool g_do_update = true;
 MAIN_SCREEN_STATE g_screen_state = S_MAIN_SCREEN;
 
 // peripherals
-Si5351 g_generator;
+//Si5351 g_generator;
 SimpleTimer g_timer;
 Rotary g_rotary = Rotary(PIN_ROTARY_CLK, PIN_ROTARY_DATA, PIN_ROTARY_BTN);
 Adafruit_PCD8544 g_display = Adafruit_PCD8544(PIN_PCD_CLK, PIN_PCD_DIN, 
@@ -123,13 +123,10 @@ void setup()
 
 void generator_initialize()
 {
-  g_generator.init(SI5351_CRYSTAL_LOAD_8PF, XTAL_CUSTOM_FREQ, 0);
-  g_generator.drive_strength(SI5351_CLK2, SI5351_DRIVE_8MA);
 }
 
 void generator_set_frequency(uint64_t freq)
 {  
-  g_generator.set_freq(freq, SI5351_CLK2);
   delay(FREQ_DELAY_MS);
 }
 
