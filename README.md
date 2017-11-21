@@ -22,11 +22,11 @@ Next peripherals are in use:
  
 Requirements:
 -------------
+ * AD9850 from F4GOJ - https://github.com/F4GOJ/AD9850
  * Rotary encoder library modified fork - https://github.com/sh123/Rotary/tree/rotary_button
  * Simple Timer library - https://github.com/jfturcot/SimpleTimer
  * Adafruit PCD8544 (from Arduino library)- https://github.com/adafruit/Adafruit-PCD8544-Nokia-5110-LCD-library
  * Adafruit GFX (from Arduino library) - https://github.com/adafruit/Adafruit-GFX-Library
- * AD9850 (from Arduino library)
 
 Supported operations:
 ---------------------
