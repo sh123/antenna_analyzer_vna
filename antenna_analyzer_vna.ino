@@ -15,6 +15,12 @@
 
 #define BANDS_CNT          12
 
+// AD9850 pins
+#define PIN_GEN_RESET     2
+#define PIN_GEN_CLK       8
+#define PIN_GEN_UD        9
+#define PIN_GEN_DATA      10
+
 // analog read pins
 #define PIN_SWR_FWD        0
 #define PIN_SWR_RFL        1
@@ -43,7 +49,7 @@
 #define FREQ_MAX           20000000000ULL
 #define FREQ_DELAY_MS      5
 
-#define TO_KHZ(freq)       (freq / (1000ULL * 1))
+#define TO_KHZ(freq)       (freq / 1000)
 #define VALID_RANGE(freq)  (freq < FREQ_MAX && !(freq > 14810000000ULL && freq < 15000000000ULL))
 
 enum MAIN_SCREEN_STATE {
@@ -54,22 +60,22 @@ enum MAIN_SCREEN_STATE {
 };
 
 struct band_map_t {
-  uint64_t freq;
-  uint64_t freq_step;
+  uint32_t freq;
+  uint32_t freq_step;
   char *band_name;
 } const g_bands[BANDS_CNT] PROGMEM = {
-  {   180000000ULL,  1000000ULL, "TOP" },
-  {   350000000ULL,  1000000ULL, "80m" },
-  {   535000000ULL,  2000000ULL, "60m" },
-  {   710000000ULL,  2000000ULL, "40m" },
-  {  1011000000ULL,  2500000ULL, "30m" },
-  {  1410000000ULL,  2500000ULL, "20m" },
-  {  1810000000ULL,  2500000ULL, "17m" },
-  {  2107000000ULL,  2500000ULL, "15m" },
-  {  2490000000ULL,  2500000ULL, "12m" },
-  {  2700000000ULL,  5000000ULL, "11m" },
-  {  2810000000ULL,  5000000ULL, "10m" },
-  {  5010000000ULL, 10000000ULL, "6m " }
+  {   1800000ULL,  10000ULL, "TOP" },
+  {   3500000ULL,  10000ULL, "80m" },
+  {   5350000ULL,  20000ULL, "60m" },
+  {   7100000ULL,  20000ULL, "40m" },
+  {  10110000ULL,  25000ULL, "30m" },
+  {  14100000ULL,  25000ULL, "20m" },
+  {  18100000ULL,  25000ULL, "17m" },
+  {  21070000ULL,  25000ULL, "15m" },
+  {  24900000ULL,  25000ULL, "12m" },
+  {  27000000ULL,  50000ULL, "11m" },
+  {  28100000ULL,  50000ULL, "10m" },
+  {  50100000ULL, 100000ULL, "6m " }
 };
 
 // band state
@@ -86,7 +92,6 @@ bool g_do_update = true;
 MAIN_SCREEN_STATE g_screen_state = S_MAIN_SCREEN;
 
 // peripherals
-//Si5351 g_generator;
 SimpleTimer g_timer;
 Rotary g_rotary = Rotary(PIN_ROTARY_CLK, PIN_ROTARY_DATA, PIN_ROTARY_BTN);
 Adafruit_PCD8544 g_display = Adafruit_PCD8544(PIN_PCD_CLK, PIN_PCD_DIN, 
@@ -123,10 +128,12 @@ void setup()
 
 void generator_initialize()
 {
+  DDS.begin(PIN_GEN_CLK, PIN_GEN_UD, PIN_GEN_DATA, PIN_GEN_RESET);
 }
 
 void generator_set_frequency(uint64_t freq)
 {  
+  DDS.setfreq(freq, 0);
   delay(FREQ_DELAY_MS);
 }
 
