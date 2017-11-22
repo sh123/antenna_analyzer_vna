@@ -10,9 +10,6 @@
 #include <SimpleTimer.h>
 #include "Wire.h"
 
-// 25 / 27 MHz crystals
-#define XTAL_CUSTOM_FREQ   27000000
-
 #define BANDS_CNT          12
 
 // AD9850 pins
