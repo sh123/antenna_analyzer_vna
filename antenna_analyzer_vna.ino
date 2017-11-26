@@ -41,13 +41,13 @@
 #define SWR_GRAPH_HEIGHT   (SWR_SCREEN_HEIGHT - SWR_SCREEN_CHAR)
 #define SWR_GRAPH_CROP     6
 
-#define FREQ_STEP_INC      2500000ULL
-#define FREQ_STEP_MAX      100000000ULL
-#define FREQ_MAX           20000000000ULL
+#define FREQ_STEP_INC      25000ULL
+#define FREQ_STEP_MAX      1000000ULL
+#define FREQ_MAX           55000000ULL
 #define FREQ_DELAY_MS      5
 
 #define TO_KHZ(freq)       (freq / 1000)
-#define VALID_RANGE(freq)  (freq < FREQ_MAX && !(freq > 14810000000ULL && freq < 15000000000ULL))
+#define VALID_RANGE(freq)  (freq < FREQ_MAX)
 
 enum MAIN_SCREEN_STATE {
   S_MAIN_SCREEN = 0,
