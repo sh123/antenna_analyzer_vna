@@ -43,7 +43,7 @@
 
 #define FREQ_STEP_INC      25000ULL
 #define FREQ_STEP_MAX      1000000ULL
-#define FREQ_MAX           55000000ULL
+#define FREQ_MAX           75000000ULL
 #define FREQ_DELAY_MS      5
 
 #define TO_KHZ(freq)       (freq / 1000)
@@ -109,7 +109,7 @@ void setup()
   g_timer.setInterval(500, process_display_swr);
   g_timer.setInterval(100, process_rotary_button);
   //attachInterrupt(digitalPinToInterrupt(PIN_ROTARY_BTN), process_rotary_button, CHANGE);
-  g_timer.setInterval(10, process_rotary);
+  g_timer.setInterval(1, process_rotary);
   //attachInterrupt(digitalPinToInterrupt(PIN_ROTARY_CLK), process_rotary, CHANGE);
 
   g_display.begin();
@@ -129,7 +129,7 @@ void generator_initialize()
 }
 
 void generator_set_frequency(uint64_t freq)
-{  
+{
   DDS.setfreq(freq, 0);
   delay(FREQ_DELAY_MS);
 }
@@ -289,7 +289,7 @@ void band_select(int index)
     swr_list_clear();
     
     g_swr_min = SWR_MAX;
-    g_freq_min = g_active_band.freq / 100000ULL;
+    g_freq_min = g_active_band.freq / 1000ULL;
 
     generator_set_frequency(g_active_band.freq);
   }
@@ -435,11 +435,13 @@ void process_display_swr()
 
     case S_MAIN_SCREEN:
 
+      /*
       Serial.print(freq_khz); Serial.print(F(" "));
       Serial.print(val_fwd); Serial.print(F(" "));
       Serial.print(val_rfl); Serial.print(F(" "));
       Serial.print(swr); Serial.println(F(""));
-
+      */
+      
       g_display.print(g_active_band.band_name); g_display.print(F(": ")); 
       g_display.print(freq_khz); g_display.println(F(" k"));
       g_display.print(F("SWR: ")); g_display.println(swr);
@@ -469,7 +471,7 @@ void process_display_swr()
     case S_SETTINGS:
 
       g_display.print(F("STEP: ")); 
-      g_display.print((long)(g_active_band.freq_step/100000UL));
+      g_display.print((long)(g_active_band.freq_step/1000UL));
       g_display.print(F(" kHz"));
 
       break;
