@@ -1,7 +1,9 @@
 # antenna_analyzer
 Arduino 160 to 6m band VNA antenna analyzer based on AD9850 module.
 
-Influenced by https://hamprojects.wordpress.com/2016/02/21/hf-arduino-vna-english-version/
+Influenced by 
+* http://ra4nal.qrz.ru/vna.shtml
+* https://hamprojects.wordpress.com/2016/02/21/hf-arduino-vna-english-version/
 
 Arudino VNA Antenna Analyzer
 ============================
