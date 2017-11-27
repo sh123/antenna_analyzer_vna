@@ -100,7 +100,11 @@ Adafruit_PCD8544 g_display = Adafruit_PCD8544(PIN_PCD_CLK, PIN_PCD_DIN,
 void setup()
 {
   Serial.begin(9600);
-  
+
+  analogReference(EXTERNAL) ;
+  analogRead(PIN_SWR_FWD);
+  analogRead(PIN_SWR_RFL);
+ 
   generator_initialize();
 
   swr_list_clear(); 
