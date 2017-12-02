@@ -10,7 +10,7 @@
 #include <SimpleTimer.h>
 #include "Wire.h"
 
-#define BANDS_CNT          12
+#define BANDS_CNT         12
 
 // AD9850 pins
 #define PIN_GEN_RESET     2
@@ -19,35 +19,40 @@
 #define PIN_GEN_DATA      10
 
 // analog read pins
-#define PIN_SWR_FWD        0
-#define PIN_SWR_RFL        1
+#define PIN_SWR_AMP       0
+#define PIN_SWR_PHS       1
 
 // rotary encoder pins
-#define PIN_ROTARY_CLK     11
-#define PIN_ROTARY_DATA    12
-#define PIN_ROTARY_BTN     13
+#define PIN_ROTARY_CLK    A4
+#define PIN_ROTARY_DATA   A3
+#define PIN_ROTARY_BTN    A2
 
 // screen pins
-#define PIN_PCD_CLK        7
-#define PIN_PCD_DIN        6
-#define PIN_PCD_DC         5
-#define PIN_PCD_CS         4
-#define PIN_PCD_RST        3
+#define PIN_PCD_CLK       7
+#define PIN_PCD_DIN       6
+#define PIN_PCD_DC        5
+#define PIN_PCD_CS        4
+#define PIN_PCD_RST       3
 
-#define SWR_MAX            32
-#define SWR_LIST_SIZE      84
-#define SWR_SCREEN_HEIGHT  48
-#define SWR_SCREEN_CHAR    8
-#define SWR_GRAPH_HEIGHT   (SWR_SCREEN_HEIGHT - SWR_SCREEN_CHAR)
-#define SWR_GRAPH_CROP     6
+#define SWR_MAX           32
+#define SWR_LIST_SIZE     84
+#define SWR_SCREEN_HEIGHT 48
+#define SWR_SCREEN_CHAR   8
+#define SWR_GRAPH_HEIGHT  (SWR_SCREEN_HEIGHT - SWR_SCREEN_CHAR)
+#define SWR_GRAPH_CROP    6
 
-#define FREQ_STEP_INC      25000ULL
-#define FREQ_STEP_MAX      1000000ULL
-#define FREQ_MAX           75000000ULL
-#define FREQ_DELAY_MS      5
+#define FREQ_STEP_INC     5000
+#define FREQ_STEP_MAX     1000000
+#define FREQ_MAX          75000000
+#define FREQ_DELAY_MS     5
 
-#define TO_KHZ(freq)       (freq / 1000)
-#define VALID_RANGE(freq)  (freq < FREQ_MAX)
+#define ADC_DB_RES        60.0 / 1024.0
+#define ADC_DB_OFFSET     (-30)
+#define ADC_DEG_RES       180.0 / 1024.0
+
+#define D2R               3.14159/180 
+#define TO_KHZ(freq)      (freq / 1000)
+#define VALID_RANGE(freq) (freq < FREQ_MAX)
 
 enum MAIN_SCREEN_STATE {
   S_MAIN_SCREEN = 0,
@@ -61,19 +66,40 @@ struct band_map_t {
   uint32_t freq_step;
   char *band_name;
 } const g_bands[BANDS_CNT] PROGMEM = {
-  {   1800000ULL,  10000ULL, "TOP" },
-  {   3500000ULL,  10000ULL, "80m" },
-  {   5350000ULL,  20000ULL, "60m" },
-  {   7100000ULL,  20000ULL, "40m" },
-  {  10110000ULL,  25000ULL, "30m" },
-  {  14100000ULL,  25000ULL, "20m" },
-  {  18100000ULL,  25000ULL, "17m" },
-  {  21070000ULL,  25000ULL, "15m" },
-  {  24900000ULL,  25000ULL, "12m" },
-  {  27000000ULL,  50000ULL, "11m" },
-  {  28100000ULL,  50000ULL, "10m" },
-  {  50100000ULL, 100000ULL, "6m " }
+  {   1800000,  10000, "TOP" },
+  {   3500000,  10000, "80m" },
+  {   5350000,  20000, "60m" },
+  {   7100000,  20000, "40m" },
+  {  10110000,  25000, "30m" },
+  {  14100000,  25000, "20m" },
+  {  18100000,  25000, "17m" },
+  {  21070000,  25000, "15m" },
+  {  24900000,  25000, "12m" },
+  {  27000000,  50000, "11m" },
+  {  28100000,  50000, "10m" },
+  {  50100000, 100000, "6m " }
 };
+
+struct measurement_t {
+  
+  uint32_t freq_khz;
+
+  uint16_t amp;      // amplitude from adc
+  uint16_t phs;      // phase value from adc
+  
+  float rl_db;
+  float phi_deg;
+  
+  float rho;
+  
+  float rs;
+  float xs;
+  
+  float swr;
+  float z;
+  
+} g_pt;
+
 
 // band state
 int g_active_band_index = 0;
@@ -91,7 +117,7 @@ MAIN_SCREEN_STATE g_screen_state = S_MAIN_SCREEN;
 // peripherals
 SimpleTimer g_timer;
 Rotary g_rotary = Rotary(PIN_ROTARY_CLK, PIN_ROTARY_DATA, PIN_ROTARY_BTN);
-Adafruit_PCD8544 g_display = Adafruit_PCD8544(PIN_PCD_CLK, PIN_PCD_DIN, 
+Adafruit_PCD8544 g_disp = Adafruit_PCD8544(PIN_PCD_CLK, PIN_PCD_DIN, 
                                               PIN_PCD_DC, PIN_PCD_CS, 
                                               PIN_PCD_RST);
 
@@ -102,8 +128,8 @@ void setup()
   Serial.begin(9600);
 
   analogReference(EXTERNAL) ;
-  analogRead(PIN_SWR_FWD);
-  analogRead(PIN_SWR_RFL);
+  analogRead(PIN_SWR_AMP);
+  analogRead(PIN_SWR_PHS);
  
   generator_initialize();
 
@@ -116,13 +142,13 @@ void setup()
   g_timer.setInterval(1, process_rotary);
   //attachInterrupt(digitalPinToInterrupt(PIN_ROTARY_CLK), process_rotary, CHANGE);
 
-  g_display.begin();
-  g_display.setContrast(60);
-  g_display.display();
-  delay(500);
+  g_disp.begin();
+  g_disp.setContrast(60);
+  g_disp.display();
+  delay(100);
   
-  g_display.clearDisplay();
-  g_display.display();
+  g_disp.clearDisplay();
+  g_disp.display();
 }
 
 /* --------------------------------------------------------------------------*/
@@ -132,7 +158,7 @@ void generator_initialize()
   DDS.begin(PIN_GEN_CLK, PIN_GEN_UD, PIN_GEN_DATA, PIN_GEN_RESET);
 }
 
-void generator_set_frequency(uint64_t freq)
+void generator_set_frequency(uint32_t freq)
 {
   DDS.setfreq(freq, 0);
   delay(FREQ_DELAY_MS);
@@ -151,7 +177,7 @@ void swr_list_shift_right()
 {
   g_swr_list[0] = 0;
   
-  for (int i = SWR_LIST_SIZE - 1; i != 0; i--) {
+  for (int i = SWR_LIST_SIZE - 2; i != 0; i--) {
     g_swr_list[i + 1] = g_swr_list[i];
   }
 }
@@ -160,7 +186,7 @@ void swr_list_shift_left()
 {
   g_swr_list[SWR_LIST_SIZE - 1] = 0;
   
-  for (int i = 0; i < SWR_LIST_SIZE - 1; i++) {
+  for (int i = 0; i < SWR_LIST_SIZE - 2; i++) {
     g_swr_list[i] = g_swr_list[i + 1];
   }
 }
@@ -176,7 +202,7 @@ void swr_list_draw()
     
     if (g_swr_list[i] != 0) {
       
-      g_display.drawFastVLine(i, SWR_SCREEN_HEIGHT - g_swr_list[i] + SWR_GRAPH_CROP, g_swr_list[i] - SWR_GRAPH_CROP, BLACK);
+      g_disp.drawFastVLine(i, SWR_SCREEN_HEIGHT - g_swr_list[i] + SWR_GRAPH_CROP, g_swr_list[i] - SWR_GRAPH_CROP, BLACK);
       
       process_rotary();
       process_rotary_button();
@@ -198,11 +224,11 @@ void swr_list_sweep_and_fill()
       process_rotary();
       process_rotary_button();
 
-      swr = swr_read();
+      swr_measure();
       swr_update_minimum_swr(swr, TO_KHZ(freq_hz));
     }
     
-    g_swr_list[i] = (unsigned char)swr_screen_normalize(swr);
+    g_swr_list[i] = (unsigned char)swr_screen_normalize(g_pt.swr);
     
     freq_hz += g_active_band.freq_step;
     
@@ -213,13 +239,13 @@ void swr_list_sweep_and_fill()
 
 void swr_list_grid_draw() 
 {
-  g_display.drawFastVLine(SWR_LIST_SIZE / 2, SWR_SCREEN_CHAR, SWR_SCREEN_CHAR / 2, BLACK);
+  g_disp.drawFastVLine(SWR_LIST_SIZE / 2, SWR_SCREEN_CHAR, SWR_SCREEN_CHAR / 2, BLACK);
 
   for (unsigned char x = 0; x <= SWR_LIST_SIZE; x += SWR_LIST_SIZE / 12) {
     
     for (unsigned char y = SWR_SCREEN_CHAR; y <= SWR_GRAPH_HEIGHT + SWR_GRAPH_CROP; y += SWR_GRAPH_HEIGHT / SWR_GRAPH_CROP) {
 
-      g_display.drawPixel(x + 6, y + SWR_SCREEN_CHAR - 1, BLACK);
+      g_disp.drawPixel(x + 6, y + SWR_SCREEN_CHAR - 1, BLACK);
 
     } // y
     
@@ -244,31 +270,49 @@ void swr_update_minimum_swr(double swr, long freq_khz)
   }
 }
 
-double swr_read()
+void swr_measure()
 {
-  int val_fwd = analogRead(PIN_SWR_FWD);
-  int val_rfl = analogRead(PIN_SWR_RFL);
-  return swr_calculate(val_fwd, val_rfl);
+  g_pt.freq_khz = TO_KHZ(g_active_band.freq);
+  
+  g_pt.amp = 0;
+  g_pt.phs = 0;
+
+  for (int i = 0; i < 16; i++) {
+    g_pt.amp += analogRead(PIN_SWR_AMP);
+    g_pt.phs += analogRead(PIN_SWR_PHS);
+  }
+
+  g_pt.amp /= 16;
+  g_pt.phs /= 16;
+
+  g_pt.rl_db = fabs(((float)g_pt.amp * ADC_DB_RES) + ADC_DB_OFFSET - 17.5);
+  g_pt.phi_deg = ((float)g_pt.phs * ADC_DEG_RES);
+
+  g_pt.rho = pow(10.0, g_pt.rl_db / -20.0);
+  
+  float re = g_pt.rho * cos(g_pt.phi_deg * D2R);
+  float im = g_pt.rho * sin(g_pt.phi_deg * D2R);
+  float denominator = ((1 - re) * (1 - re) + (im * im));
+  
+  g_pt.rs = fabs((1 - (re * re) - (im * im)) / denominator) * 50.0;
+  g_pt.xs = fabs(2.0 * im) / denominator * 50.0;
+  g_pt.z = sqrt(g_pt.rs * g_pt.rs + g_pt.xs * g_pt.xs);
+  g_pt.swr = fabs(1.0 + g_pt.rho) / (1.001 - g_pt.rho);
 }
 
-double swr_calculate(int fwd, int rfl) 
+void swr_print_info()
 {
-  int val_fwd = fwd;
-  int val_rfl = rfl;
-  
-  if (val_rfl > val_fwd) {
-    val_rfl = val_fwd;
-  }
-  
-  // NOTE, no imaginary reactive part
-  double gamma = (double)val_rfl / (double)val_fwd;
-  
-  double swr = (1 + gamma) / (1 - gamma);
-  
-  if (swr > SWR_MAX || isnan(swr)) {
-    swr = SWR_MAX;
-  }
-  return swr;
+  g_disp.print(g_active_band.band_name); g_disp.print(F(": ")); 
+  g_disp.print(g_pt.freq_khz); g_disp.println(F(" k"));
+  g_disp.print(F("SWR: ")); g_disp.println(g_pt.swr); 
+  g_disp.print(F("Z:   ")); g_disp.println(g_pt.z);
+  g_disp.print(g_pt.rs); g_disp.print(F("+")); g_disp.println(g_pt.xs); 
+  g_disp.print(g_pt.rl_db); g_disp.print(F(" ")); g_disp.println(g_pt.phi_deg);
+  g_disp.print(g_pt.amp); g_disp.print(F(" ")); g_disp.println(g_pt.phs); 
+  /*
+  g_disp.println(F("MIN:"));
+  g_disp.print(g_swr_min); g_disp.print(F(" ")); g_disp.println(g_freq_min);
+  */
 }
 
 /* --------------------------------------------------------------------------*/
@@ -280,20 +324,20 @@ void band_select_next()
   if (g_active_band_index >= BANDS_CNT) {
     g_active_band_index = 0;
   }
-  
+
   band_select(g_active_band_index);
 }
 
 void band_select(int index) 
 {
   if (index < BANDS_CNT) {
-    
+
     memcpy_PF((void*)&g_active_band, (uint_farptr_t)&g_bands[index], sizeof(g_bands[index]));
     
     swr_list_clear();
     
     g_swr_min = SWR_MAX;
-    g_freq_min = g_active_band.freq / 1000ULL;
+    g_freq_min = TO_KHZ(g_active_band.freq);
 
     generator_set_frequency(g_active_band.freq);
   }
@@ -420,52 +464,37 @@ void process_rotary_button()
 }
 
 void process_display_swr() 
-{
-  long freq_khz = TO_KHZ(g_active_band.freq);
-    
-  int val_fwd = analogRead(PIN_SWR_FWD);
-  int val_rfl = analogRead(PIN_SWR_RFL);
-  double swr = swr_calculate(val_fwd, val_rfl);
+{   
+  swr_measure();
+  
+  double swr = g_pt.swr;
+  
+  swr_list_store_center(g_pt.swr);
+  swr_update_minimum_swr(g_pt.swr, 0);
 
-  swr_list_store_center(swr);
-  swr_update_minimum_swr(swr, freq_khz);
-
-  g_display.clearDisplay();
-  g_display.setTextSize(1);
-  g_display.setTextColor(BLACK);
-  g_display.setCursor(0,0);
+  g_disp.clearDisplay();
+  g_disp.setTextSize(1);
+  g_disp.setTextColor(BLACK);
+  g_disp.setCursor(0,0);
 
   switch (g_screen_state) {
 
     case S_MAIN_SCREEN:
-
-      /*
-      Serial.print(freq_khz); Serial.print(F(" "));
-      Serial.print(val_fwd); Serial.print(F(" "));
-      Serial.print(val_rfl); Serial.print(F(" "));
-      Serial.print(swr); Serial.println(F(""));
-      */
+    
+      swr_print_info();
       
-      g_display.print(g_active_band.band_name); g_display.print(F(": ")); 
-      g_display.print(freq_khz); g_display.println(F(" k"));
-      g_display.print(F("SWR: ")); g_display.println(swr);
-      g_display.print(F("FWD: ")); g_display.println(val_fwd);
-      g_display.print(F("RFL: ")); g_display.println(val_rfl);
-      g_display.println(F("MIN:"));
-      g_display.print(g_swr_min); g_display.print(F(" ")); g_display.println(g_freq_min);
-
       break;
 
     case S_GRAPH_AUTOMATIC:
-    
-      g_display.print(F("A "));
+   
+      g_disp.print(F("A "));
       swr_list_sweep_and_fill();
 
     case S_GRAPH_MANUAL:
 
-      g_display.print(freq_khz);
-      g_display.print(F(" "));
-      g_display.println(swr);
+      g_disp.print(g_pt.freq_khz);
+      g_disp.print(F(" "));
+      g_disp.println(swr);
 
       swr_list_grid_draw();
       swr_list_draw();
@@ -474,15 +503,15 @@ void process_display_swr()
 
     case S_SETTINGS:
 
-      g_display.print(F("STEP: ")); 
-      g_display.print((long)(g_active_band.freq_step/1000UL));
-      g_display.print(F(" kHz"));
+      g_disp.print(F("STEP: ")); 
+      g_disp.print(TO_KHZ(g_active_band.freq_step));
+      g_disp.print(F(" kHz"));
 
       break;
 
   } // screen state
 
-  g_display.display();
+  g_disp.display();
 }
 
 /* --------------------------------------------------------------------------*/
