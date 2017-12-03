@@ -48,9 +48,11 @@
 
 #define ADC_ITER_CNT      16
 #define ADC_DB_RES        60.0 / 1024.0
-#define ADC_DB_OFFSET     (-30)
-#define ADC_DB_CAL        (-17.5)
+#define ADC_DB_OFFSET     (-30.0)
 #define ADC_DEG_RES       180.0 / 1024.0
+
+#define ADC_RL_CAL        (-19.0)
+#define ADC_PHI_CAL       (-5.0)
 
 #define DEG_TO_RAD(deg)   (deg * 3.14159 / 180.0)
 #define TO_KHZ(freq)      (freq / 1000)
@@ -287,8 +289,8 @@ void swr_measure()
   g_pt.amp /= ADC_ITER_CNT;
   g_pt.phs /= ADC_ITER_CNT;
 
-  g_pt.rl_db = fabs(((float)g_pt.amp * ADC_DB_RES) + ADC_DB_OFFSET + ADC_DB_CAL);
-  g_pt.phi_deg = ((float)g_pt.phs * ADC_DEG_RES);
+  g_pt.rl_db = fabs(((float)g_pt.amp * ADC_DB_RES) + ADC_DB_OFFSET + ADC_RL_CAL);
+  g_pt.phi_deg = ((float)g_pt.phs * ADC_DEG_RES) + ADC_PHI_CAL;
 
   g_pt.rho = pow(10.0, g_pt.rl_db / -20.0);
   
