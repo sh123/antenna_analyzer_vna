@@ -51,8 +51,8 @@
 #define ADC_DB_OFFSET     (-30.0)
 #define ADC_DEG_RES       180.0 / 1024.0
 
-#define ADC_RL_CAL        (-19.0)
-#define ADC_PHI_CAL       (-5.0)
+#define ADC_RL_CAL        (-18.5)
+#define ADC_PHI_CAL       (-4.0)
 
 #define DEG_TO_RAD(deg)   (deg * 3.14159 / 180.0)
 #define TO_KHZ(freq)      (freq / 1000)
@@ -313,9 +313,9 @@ void swr_print_info()
   g_disp.print(g_pt.freq_khz); g_disp.println(F(" k"));
   g_disp.print(F("SWR: ")); g_disp.println(g_pt.swr); 
   g_disp.print(F("Z:   ")); g_disp.println(g_pt.z);
-  g_disp.print(g_pt.rs); g_disp.print(F("+")); g_disp.println(g_pt.xs); 
-  g_disp.print(g_pt.rl_db); g_disp.print(F(" ")); g_disp.println(g_pt.phi_deg);
-  g_disp.print(g_pt.amp); g_disp.print(F(" ")); g_disp.println(g_pt.phs); 
+  g_disp.print(F("R: ")); g_disp.print((uint16_t)g_pt.rs); g_disp.print(F(" + ")); g_disp.println((uint16_t)g_pt.xs); 
+  g_disp.print(F("RL: ") );g_disp.print(g_pt.rl_db); g_disp.print(F(" ")); g_disp.println(g_pt.amp); 
+  g_disp.print(F("PHI: ")); g_disp.print((uint16_t)g_pt.phi_deg); g_disp.print(F(" ")); g_disp.println(g_pt.phs); 
   /*
   g_disp.println(F("MIN:"));
   g_disp.print(g_swr_min); g_disp.print(F(" ")); g_disp.println(g_freq_min);
@@ -474,7 +474,8 @@ void process_display_swr()
 {   
   swr_measure();
   
-  double swr = g_pt.swr;
+  float swr = g_pt.swr;
+  uint16_t z = g_pt.z;
   
   swr_list_store_center(g_pt.swr);
   swr_update_minimum_swr(g_pt.swr, 0);
@@ -500,8 +501,7 @@ void process_display_swr()
     case S_GRAPH_MANUAL:
 
       g_disp.print(g_pt.freq_khz);
-      g_disp.print(F(" "));
-      g_disp.println(swr);
+      g_disp.print(F(" ")); g_disp.println(swr);
 
       swr_list_grid_draw();
       swr_list_draw();
