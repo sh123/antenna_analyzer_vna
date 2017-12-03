@@ -46,11 +46,13 @@
 #define FREQ_MAX          75000000
 #define FREQ_DELAY_MS     5
 
+#define ADC_ITER_CNT      16
 #define ADC_DB_RES        60.0 / 1024.0
 #define ADC_DB_OFFSET     (-30)
+#define ADC_DB_CAL        (-17.5)
 #define ADC_DEG_RES       180.0 / 1024.0
 
-#define D2R               3.14159/180 
+#define DEG_TO_RAD(deg)   (deg * 3.14159 / 180.0)
 #define TO_KHZ(freq)      (freq / 1000)
 #define VALID_RANGE(freq) (freq < FREQ_MAX)
 
@@ -277,26 +279,29 @@ void swr_measure()
   g_pt.amp = 0;
   g_pt.phs = 0;
 
-  for (int i = 0; i < 16; i++) {
+  for (int i = 0; i < ADC_ITER_CNT; i++) {
     g_pt.amp += analogRead(PIN_SWR_AMP);
     g_pt.phs += analogRead(PIN_SWR_PHS);
   }
 
-  g_pt.amp /= 16;
-  g_pt.phs /= 16;
+  g_pt.amp /= ADC_ITER_CNT;
+  g_pt.phs /= ADC_ITER_CNT;
 
-  g_pt.rl_db = fabs(((float)g_pt.amp * ADC_DB_RES) + ADC_DB_OFFSET - 17.5);
+  g_pt.rl_db = fabs(((float)g_pt.amp * ADC_DB_RES) + ADC_DB_OFFSET + ADC_DB_CAL);
   g_pt.phi_deg = ((float)g_pt.phs * ADC_DEG_RES);
 
   g_pt.rho = pow(10.0, g_pt.rl_db / -20.0);
   
-  float re = g_pt.rho * cos(g_pt.phi_deg * D2R);
-  float im = g_pt.rho * sin(g_pt.phi_deg * D2R);
+  float re = g_pt.rho * cos(DEG_TO_RAD(g_pt.phi_deg));
+  float im = g_pt.rho * sin(DEG_TO_RAD(g_pt.phi_deg));
+  
   float denominator = ((1 - re) * (1 - re) + (im * im));
   
   g_pt.rs = fabs((1 - (re * re) - (im * im)) / denominator) * 50.0;
   g_pt.xs = fabs(2.0 * im) / denominator * 50.0;
+  
   g_pt.z = sqrt(g_pt.rs * g_pt.rs + g_pt.xs * g_pt.xs);
+  
   g_pt.swr = fabs(1.0 + g_pt.rho) / (1.001 - g_pt.rho);
 }
 
