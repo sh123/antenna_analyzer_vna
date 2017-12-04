@@ -73,26 +73,26 @@ struct band_map_t {
   uint16_t adc_phi_cal;
   
 } const g_bands[BANDS_CNT] PROGMEM = {
-  {   1800000,  10000, "TOP", 840, 45 },
-  {   3500000,  10000, "80m", 840, 45 },
-  {   5350000,  20000, "60m", 840, 45 },
-  {   7100000,  20000, "40m", 840, 45 },
-  {  10110000,  25000, "30m", 840, 45 },
-  {  14100000,  25000, "20m", 840, 45 },
-  {  18100000,  25000, "17m", 840, 45 },
-  {  21070000,  25000, "15m", 840, 45 },
-  {  24900000,  25000, "12m", 840, 45 },
-  {  27000000,  50000, "11m", 840, 45 },
-  {  28100000,  50000, "10m", 840, 45 },
-  {  50100000, 100000, "6m ", 840, 45 }
+  {   1800000,  10000, "TOP", 782, 355 },
+  {   3500000,  10000, "80m", 806, 115 },
+  {   5350000,  20000, "60m", 811, 62  },
+  {   7100000,  20000, "40m", 812, 45  },
+  {  10110000,  25000, "30m", 813, 35  },
+  {  14100000,  25000, "20m", 813, 30  },
+  {  18100000,  25000, "17m", 812, 31  },
+  {  21070000,  25000, "15m", 811, 44  },
+  {  24900000,  25000, "12m", 800, 50  },
+  {  27000000,  50000, "11m", 809, 50  },
+  {  28100000,  50000, "10m", 809, 50  },
+  {  50100000, 100000, "6m ", 800, 200 }
 };
 
 struct measurement_t {
   
   uint32_t freq_khz;
 
-  uint16_t amp;      // amplitude from adc
-  uint16_t phs;      // phase value from adc
+  int amp;      // amplitude from adc
+  int phs;      // phase value from adc
   
   float rl_db;
   float phi_deg;
@@ -295,7 +295,10 @@ void swr_measure()
   g_pt.amp -= g_active_band.adc_rl_cal - 1024 / 2;
   g_pt.phs -= g_active_band.adc_phi_cal;
 
-  g_pt.rl_db = fabs(((float)g_pt.amp * ADC_DB_RES) + ADC_DB_OFFSET);
+  if (g_pt.amp <= 0) g_pt.amp = 1;
+  if (g_pt.phs <= 0) g_pt.phs = 1;
+
+  g_pt.rl_db = fabs(((float)g_pt.amp * ADC_DB_RES) + ADC_DB_OFFSET); 
   g_pt.phi_deg = ((float)g_pt.phs * ADC_DEG_RES);
 
   g_pt.rho = pow(10.0, g_pt.rl_db / -20.0);
@@ -317,11 +320,11 @@ void swr_print_info()
 {
   g_disp.print(g_active_band.band_name); g_disp.print(F(": ")); 
   g_disp.print(g_pt.freq_khz); g_disp.println(F(" k"));
-  g_disp.print(F("SWR: ")); g_disp.println(g_pt.swr); 
-  g_disp.print(F("Z:   ")); g_disp.println(g_pt.z);
-  g_disp.print(F("R: ")); g_disp.print((uint16_t)g_pt.rs); g_disp.print(F(" + ")); g_disp.println((uint16_t)g_pt.xs); 
-  g_disp.print(F("RL: ") );g_disp.print(g_pt.rl_db); g_disp.print(F(" ")); g_disp.println(g_pt.amp); 
-  g_disp.print(F("PHI: ")); g_disp.print((uint16_t)g_pt.phi_deg); g_disp.print(F(" ")); g_disp.println(g_pt.phs); 
+  g_disp.print(F("S: ")); g_disp.println(g_pt.swr); 
+  g_disp.print(F("Z: ")); g_disp.println(g_pt.z);
+  g_disp.print(F("R: ")); g_disp.print((uint16_t)g_pt.rs); g_disp.print(F("+")); g_disp.println((uint16_t)g_pt.xs); 
+  g_disp.print(F("d: ") );g_disp.print(g_pt.rl_db); g_disp.print(F(" ")); g_disp.println(g_pt.amp); 
+  g_disp.print(F("p: ")); g_disp.print((uint16_t)g_pt.phi_deg); g_disp.print(F(" ")); g_disp.println(g_pt.phs); 
   /*
   g_disp.println(F("MIN:"));
   g_disp.print(g_swr_min); g_disp.print(F(" ")); g_disp.println(g_freq_min);
