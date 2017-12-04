@@ -51,9 +51,6 @@
 #define ADC_DB_OFFSET     (-30.0)
 #define ADC_DEG_RES       180.0 / 1024.0
 
-#define ADC_RL_CAL        (-18.5)
-#define ADC_PHI_CAL       (-4.0)
-
 #define DEG_TO_RAD(deg)   (deg * 3.14159 / 180.0)
 #define TO_KHZ(freq)      (freq / 1000)
 #define VALID_RANGE(freq) (freq < FREQ_MAX)
@@ -66,22 +63,28 @@ enum MAIN_SCREEN_STATE {
 };
 
 struct band_map_t {
+  
   uint32_t freq;
   uint32_t freq_step;
+  
   char *band_name;
+
+  uint16_t adc_rl_cal;
+  uint16_t adc_phi_cal;
+  
 } const g_bands[BANDS_CNT] PROGMEM = {
-  {   1800000,  10000, "TOP" },
-  {   3500000,  10000, "80m" },
-  {   5350000,  20000, "60m" },
-  {   7100000,  20000, "40m" },
-  {  10110000,  25000, "30m" },
-  {  14100000,  25000, "20m" },
-  {  18100000,  25000, "17m" },
-  {  21070000,  25000, "15m" },
-  {  24900000,  25000, "12m" },
-  {  27000000,  50000, "11m" },
-  {  28100000,  50000, "10m" },
-  {  50100000, 100000, "6m " }
+  {   1800000,  10000, "TOP", 840, 45 },
+  {   3500000,  10000, "80m", 840, 45 },
+  {   5350000,  20000, "60m", 840, 45 },
+  {   7100000,  20000, "40m", 840, 45 },
+  {  10110000,  25000, "30m", 840, 45 },
+  {  14100000,  25000, "20m", 840, 45 },
+  {  18100000,  25000, "17m", 840, 45 },
+  {  21070000,  25000, "15m", 840, 45 },
+  {  24900000,  25000, "12m", 840, 45 },
+  {  27000000,  50000, "11m", 840, 45 },
+  {  28100000,  50000, "10m", 840, 45 },
+  {  50100000, 100000, "6m ", 840, 45 }
 };
 
 struct measurement_t {
@@ -289,8 +292,11 @@ void swr_measure()
   g_pt.amp /= ADC_ITER_CNT;
   g_pt.phs /= ADC_ITER_CNT;
 
-  g_pt.rl_db = fabs(((float)g_pt.amp * ADC_DB_RES) + ADC_DB_OFFSET + ADC_RL_CAL);
-  g_pt.phi_deg = ((float)g_pt.phs * ADC_DEG_RES) + ADC_PHI_CAL;
+  g_pt.amp -= g_active_band.adc_rl_cal - 1024 / 2;
+  g_pt.phs -= g_active_band.adc_phi_cal;
+
+  g_pt.rl_db = fabs(((float)g_pt.amp * ADC_DB_RES) + ADC_DB_OFFSET);
+  g_pt.phi_deg = ((float)g_pt.phs * ADC_DEG_RES);
 
   g_pt.rho = pow(10.0, g_pt.rl_db / -20.0);
   
