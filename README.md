@@ -15,12 +15,12 @@ SWR from 160m band up to 6m band.
 
 Next peripherals are in use:
 
- * Nokia 5110 screen, PCD8544
- * Rotary encoder
- * AD9850 clock generator - www.analog.com/media/en/technical-documentation/data-sheets/AD9850.pdf
+ * Nokia 5110 screen, PCD8544 - https://www.sparkfun.com/datasheets/LCD/Monochrome/Nokia5110.pdf
+ * AD9850 clock generator - http://www.analog.com/media/en/technical-documentation/data-sheets/AD9850.pdf
  * SGA3386 based amplifier - https://www.rf-microwave.com/datasheets/4152_Sirenza-Microdevices_SGA-3386_01.pdf
  * AD8302 gain and phase detector - http://www.analog.com/media/en/technical-documentation/data-sheets/AD8302.pdf
  * Reflectometer and attenuators as per - https://hamprojects.wordpress.com/2016/02/21/hf-arduino-vna-english-version/
+ * Rotary encoder
  
 Requirements:
 -------------
