@@ -72,24 +72,25 @@ struct band_map_t {
   // calibration values
   // TODO, automatic calibration
   
-  int adc_rl_cal_open;
+  int adc_amp_cal_open;
+  int adc_amp_cal_50ohm;
   
   int adc_phs_cal_open;
   int adc_phs_cal_short;
   
 } const g_bands[BANDS_CNT] PROGMEM = {
-  {   1800000,  10000, "TOP", 782, 345, 1013 },
-  {   3500000,  10000, "80m", 808, 120, 1010 },
-  {   5350000,  20000, "60m", 812, 70,  1002 },
-  {   7100000,  20000, "40m", 814, 51,  995 },
-  {  10110000,  25000, "30m", 814, 42,  985 },
-  {  14100000,  25000, "20m", 814, 38,  949 },
-  {  18100000,  25000, "17m", 814, 44,  918 },
-  {  21070000,  25000, "15m", 814, 50,  933 },
-  {  24900000,  25000, "12m", 800, 55,  910 },
-  {  27000000,  50000, "11m", 811, 60,  904 },
-  {  28100000,  50000, "10m", 811, 60,  898 },
-  {  50100000, 100000, "6m ", 800, 170, 800 }
+  {   1800000,  10000, "TOP", 782, 550, 345, 1013 },
+  {   3500000,  10000, "80m", 808, 490, 120, 1010 },
+  {   5350000,  20000, "60m", 812, 495, 70,  1002 },
+  {   7100000,  20000, "40m", 814, 495, 51,  995 },
+  {  10110000,  25000, "30m", 814, 497, 42,  985 },
+  {  14100000,  25000, "20m", 814, 517, 38,  949 },
+  {  18100000,  25000, "17m", 814, 531, 44,  918 },
+  {  21070000,  25000, "15m", 814, 537, 50,  933 },
+  {  24900000,  25000, "12m", 800, 547, 55,  910 },
+  {  27000000,  50000, "11m", 811, 568, 60,  904 },
+  {  28100000,  50000, "10m", 811, 573, 60,  898 },
+  {  50100000, 100000, "6m ", 800, 550, 170, 800 }
 };
 
 struct measurement_t {
@@ -301,9 +302,10 @@ uint16_t swr_phs_cal_adjust(uint16_t phs)
 
 uint16_t swr_amp_cal_adjust(uint16_t amp)
 {
-  uint16_t amp_result = amp - (g_active_band.adc_rl_cal_open - 512);
-  if (amp_result == 512) {
-    amp_result = 511;
+  int amp_cal_diff = g_active_band.adc_amp_cal_open - g_active_band.adc_amp_cal_50ohm;
+  long amp_result = (long)abs((int)amp - g_active_band.adc_amp_cal_open) * 512 / amp_cal_diff + 512;
+  if (amp_result <= 512) {
+    amp_result = 513;
   }
   return amp_result;
 }
