@@ -226,7 +226,7 @@ void swr_list_shift_left()
   }
 }
 
-void swr_list_store_center(double swr) 
+void swr_list_store_center(double swr)
 {
   g_swr_list[SWR_LIST_SIZE / 2] = (unsigned char)swr_screen_normalize(swr);
 }
@@ -346,8 +346,16 @@ void swr_measure()
   g_pt.amp /= ADC_ITER_CNT;
   g_pt.phs /= ADC_ITER_CNT;
 
-  g_pt.amp_adj = swr_amp_cal_adjust(g_pt.amp);
-  g_pt.phs_adj = swr_phs_cal_adjust(g_pt.phs);
+  swr_calculate(g_pt.amp, g_pt.phs);
+}
+
+void swr_calculate(int amp, int phs)
+{
+  g_pt.amp = amp;
+  g_pt.phs = phs;
+  
+  g_pt.amp_adj = swr_amp_cal_adjust(amp);
+  g_pt.phs_adj = swr_phs_cal_adjust(phs);
 
   g_pt.rl_db = fabs(((float)g_pt.amp_adj * ADC_DB_RES) + ADC_DB_OFFSET);
   g_pt.phi_deg = ((float)g_pt.phs_adj * ADC_DEG_RES);
