@@ -10,6 +10,10 @@
 #include <SimpleTimer.h>
 #include "Wire.h"
 
+/* --------------------------------------------------------------------------*/
+
+//#define DEBUG_SERIAL
+
 #define BANDS_CNT         12
 
 // AD9850 pins
@@ -34,27 +38,33 @@
 #define PIN_PCD_CS        4
 #define PIN_PCD_RST       3
 
-#define SWR_MAX           32
+// swr related parameters
+#define SWR_MAX           9999
 #define SWR_LIST_SIZE     84
 #define SWR_SCREEN_HEIGHT 48
 #define SWR_SCREEN_CHAR   8
 #define SWR_GRAPH_HEIGHT  (SWR_SCREEN_HEIGHT - SWR_SCREEN_CHAR)
 #define SWR_GRAPH_CROP    6
 
+// generator related
 #define FREQ_STEP_INC     5000
 #define FREQ_STEP_MAX     1000000
 #define FREQ_MAX          75000000
 #define FREQ_DELAY_MS     5
 
+// adc converter
 #define ADC_ITER_CNT      16
 #define ADC_DB_RES        60.0 / 1024.0
 #define ADC_DB_CENTER     1024 / 2
 #define ADC_DB_OFFSET     (-30.0)
 #define ADC_DEG_RES       180.0 / 1024.0
 
+// utils
 #define DEG_TO_RAD(deg)   (deg * 3.14159 / 180.0)
 #define TO_KHZ(freq)      (freq / 1000)
 #define VALID_RANGE(freq) (freq < FREQ_MAX)
+
+/* --------------------------------------------------------------------------*/
 
 enum MAIN_SCREEN_STATE 
 {
@@ -64,7 +74,7 @@ enum MAIN_SCREEN_STATE
   S_SETTINGS
 };
 
-enum SETTINGS_STATE 
+enum SETTINGS_SCREEN_STATE
 {
   S_SETTINGS_STEP = 0,
   S_SETTINGS_CAL_50OHM,
@@ -72,23 +82,56 @@ enum SETTINGS_STATE
   S_SETTINGS_CAL_SHORT
 };
 
-struct band_map_t 
+/* --------------------------------------------------------------------------*/
+
+// HF band related data
+struct band_t 
 {
   uint32_t freq;
   uint32_t freq_step;
   
   char *band_name;
 
-  // calibration values
-  // TODO, automatic calibration
+  // TODO, automatic calibration through settings
   
-  int adc_amp_cal_open;
-  int adc_amp_cal_50ohm;
+  int16_t adc_amp_cal_open;
+  int16_t adc_amp_cal_50ohm;
   
-  int adc_phs_cal_open;
-  int adc_phs_cal_short;
+  int16_t adc_phs_cal_open;
+  int16_t adc_phs_cal_short;
+};
+
+// one swr measurement point
+struct measurement_t 
+{  
+  uint32_t freq_khz;
+
+  // read from adc
+  int16_t amp;      // amplitude
+  int16_t phs;      // phase
+
+  // adjusted by calibration
+  int16_t amp_adj;
+  int16_t phs_adj;
   
-} const g_bands[BANDS_CNT] PROGMEM = {
+  float rl_db;    // return loss, S11
+  float phi_deg;  // phase shift angle
+  
+  float rho;
+  
+  float rs;       // real impedance part
+  float xs;       // complex impedance part
+  
+  float swr;
+  float z;        // impedance vector length
+};
+
+/* --------------------------------------------------------------------------*/
+
+// band state
+int16_t g_active_band_index = 0;
+struct band_t g_active_band;
+const struct band_t g_bands[BANDS_CNT] PROGMEM = {
   {   1800000,  10000, "TOP", 782, 550, 345, 1013 },
   {   3500000,  10000, "80m", 808, 490, 120, 1010 },
   {   5350000,  20000, "60m", 812, 495, 70,  1002 },
@@ -103,39 +146,12 @@ struct band_map_t
   {  50100000, 100000, "6m ", 800, 550, 170, 800 }
 };
 
-struct measurement_t 
-{  
-  uint32_t freq_khz;
-
-  // read from adc
-  int amp;      // amplitude
-  int phs;      // phase
-
-  // adjusted by calibration
-  int amp_adj;
-  int phs_adj;
-  
-  float rl_db;    // return loss, S11
-  float phi_deg;  // phase shift angle
-  
-  float rho;
-  
-  float rs;       // real impedance part
-  float xs;       // complex impedance part
-  
-  float swr;
-  float z;        // impedance vector length
-};
-
-// band state
-int g_active_band_index = 0;
-struct band_map_t g_active_band;
-
-// swr state
+// swr measurement state
+float g_swr_min;
+uint32_t g_freq_min;
 struct measurement_t g_pt;
-long g_freq_min;
-double g_swr_min;
-unsigned char g_swr_list[SWR_LIST_SIZE];
+int16_t g_amp_list[SWR_LIST_SIZE];
+int16_t g_phs_list[SWR_LIST_SIZE];
 
 // UI state
 bool g_do_update = true;
@@ -143,7 +159,7 @@ MAIN_SCREEN_STATE g_screen_state = S_MAIN_SCREEN;
 
 // UI state, settings
 bool g_settings_selected = false;
-SETTINGS_STATE g_settings_screen_state = S_SETTINGS_STEP;
+SETTINGS_SCREEN_STATE g_settings_screen_state = S_SETTINGS_STEP;
 
 // peripherals
 SimpleTimer g_timer;
@@ -156,8 +172,11 @@ Adafruit_PCD8544 g_disp = Adafruit_PCD8544(PIN_PCD_CLK, PIN_PCD_DIN,
 
 void setup()
 {
+#ifdef DEBU_SERIAL
   Serial.begin(9600);
+#endif
 
+  // from AD8302 gain/phase detector
   analogReference(EXTERNAL) ;
   analogRead(PIN_SWR_AMP);
   analogRead(PIN_SWR_PHS);
@@ -167,6 +186,7 @@ void setup()
   swr_list_clear(); 
   band_select(g_active_band_index);
 
+  // periodic execution
   g_timer.setInterval(500, process_display_swr);
   g_timer.setInterval(100, process_rotary_button);
   g_timer.setInterval(1, process_rotary);
@@ -178,7 +198,6 @@ void setup()
   g_disp.setContrast(60);
   g_disp.display();
   delay(100);
-  
   g_disp.clearDisplay();
   g_disp.display();
 }
@@ -202,56 +221,61 @@ void swr_list_clear()
 {
   for (int i = 0; i < SWR_LIST_SIZE; i++) 
   {
-    g_swr_list[i] = 0;
+    g_amp_list[i] = 0;
+    g_phs_list[i] = 0;
   }
 }
 
 void swr_list_shift_right() 
 {
-  g_swr_list[0] = 0;
+  g_amp_list[0] = 0;
+  g_phs_list[0] = 0;
   
   for (int i = SWR_LIST_SIZE - 2; i != 0; i--) 
   {
-    g_swr_list[i + 1] = g_swr_list[i];
+    g_amp_list[i + 1] = g_amp_list[i];
+    g_phs_list[i + 1] = g_phs_list[i];
   }
 }
 
 void swr_list_shift_left() 
 {
-  g_swr_list[SWR_LIST_SIZE - 1] = 0;
+  g_amp_list[SWR_LIST_SIZE - 1] = 0;
+  g_phs_list[SWR_LIST_SIZE - 1] = 0;
   
   for (int i = 0; i < SWR_LIST_SIZE - 2; i++) 
   {
-    g_swr_list[i] = g_swr_list[i + 1];
+    g_amp_list[i] = g_amp_list[i + 1];
+    g_phs_list[i] = g_phs_list[i + 1];
   }
 }
 
-void swr_list_store_center(double swr)
+void swr_list_store_center(int amp, int phs)
 {
-  g_swr_list[SWR_LIST_SIZE / 2] = (unsigned char)swr_screen_normalize(swr);
+  g_amp_list[SWR_LIST_SIZE / 2] = amp;
+  g_phs_list[SWR_LIST_SIZE / 2] = phs;
 }
 
 void swr_list_draw() 
 {  
-  for (int i = 0; i < SWR_LIST_SIZE; i++) 
+  for (uint8_t i = 0; i < SWR_LIST_SIZE; i++) 
   {
-    if (g_swr_list[i] != 0)
-    {
-      g_disp.drawFastVLine(i, SWR_SCREEN_HEIGHT - g_swr_list[i] + SWR_GRAPH_CROP, g_swr_list[i] - SWR_GRAPH_CROP, BLACK);
-      
-      process_rotary();
-      process_rotary_button();
-    }
-  } // i
+    g_pt.amp = g_amp_list[i];
+    g_pt.phs = g_phs_list[i];
+    
+    swr_calculate();
+
+    uint8_t swr = swr_screen_normalize(g_pt.swr);
+    
+    g_disp.drawFastVLine(i, SWR_SCREEN_HEIGHT - swr + SWR_GRAPH_CROP, swr - SWR_GRAPH_CROP, BLACK);
+  }
 }
 
 void swr_list_sweep_and_fill() 
 {
-  uint64_t freq_hz = g_active_band.freq - g_active_band.freq_step * SWR_LIST_SIZE / 2;
-
-  double swr = SWR_MAX;
+  uint32_t freq_hz = g_active_band.freq - g_active_band.freq_step * SWR_LIST_SIZE / 2;
     
-  for (int i = 0; i < SWR_LIST_SIZE; i++) 
+  for (uint8_t i = 0; i < SWR_LIST_SIZE; i++) 
   {
     if (VALID_RANGE(freq_hz)) 
     {
@@ -262,14 +286,16 @@ void swr_list_sweep_and_fill()
 
       swr_measure();
       swr_calculate();
-      swr_update_minimum_swr(swr, TO_KHZ(freq_hz));
+      
+      swr_update_minimum_swr(g_pt.swr, TO_KHZ(freq_hz));
     }
     
-    g_swr_list[i] = (unsigned char)swr_screen_normalize(g_pt.swr);
+    g_amp_list[i] = g_pt.amp;
+    g_phs_list[i] = g_pt.phs;
     
     freq_hz += g_active_band.freq_step;
     
-  } // over swr list
+  } // amp/phs list
 
   generator_set_frequency(g_active_band.freq);
 }
@@ -278,18 +304,18 @@ void swr_list_grid_draw()
 {
   g_disp.drawFastVLine(SWR_LIST_SIZE / 2, SWR_SCREEN_CHAR, SWR_SCREEN_CHAR / 2, BLACK);
 
-  for (unsigned char x = 0; x <= SWR_LIST_SIZE; x += SWR_LIST_SIZE / 12) 
+  for (uint8_t x = 0; x <= SWR_LIST_SIZE; x += SWR_LIST_SIZE / 12) 
   {
-    for (unsigned char y = SWR_SCREEN_CHAR; y <= SWR_GRAPH_HEIGHT + SWR_GRAPH_CROP; y += SWR_GRAPH_HEIGHT / SWR_GRAPH_CROP) 
+    for (uint8_t y = SWR_SCREEN_CHAR; y <= SWR_GRAPH_HEIGHT + SWR_GRAPH_CROP; y += SWR_GRAPH_HEIGHT / SWR_GRAPH_CROP) 
     {
       g_disp.drawPixel(x + 6, y + SWR_SCREEN_CHAR - 1, BLACK);
     }
   }
 }
 
-unsigned int swr_screen_normalize(double swr)
+uint8_t swr_screen_normalize(float swr)
 {  
-  unsigned int swr_norm = swr * (double)SWR_GRAPH_HEIGHT / (double)SWR_GRAPH_CROP;
+  uint8_t swr_norm = swr * (float)SWR_GRAPH_HEIGHT / (float)SWR_GRAPH_CROP;
   
   if (swr_norm > SWR_GRAPH_HEIGHT) 
   {
@@ -298,7 +324,7 @@ unsigned int swr_screen_normalize(double swr)
   return swr_norm;
 }
 
-void swr_update_minimum_swr(double swr, long freq_khz)
+void swr_update_minimum_swr(float swr, uint32_t freq_khz)
 {
   if (swr < g_swr_min) 
   {
@@ -309,8 +335,8 @@ void swr_update_minimum_swr(double swr, long freq_khz)
 
 uint16_t swr_phs_cal_adjust(uint16_t phs)
 {
-  int phs_cal_diff = g_active_band.adc_phs_cal_short - g_active_band.adc_phs_cal_open;
-  long phs_result = (long)abs((int)phs - g_active_band.adc_phs_cal_open) * 1024 / phs_cal_diff;
+  int16_t phs_cal_diff = g_active_band.adc_phs_cal_short - g_active_band.adc_phs_cal_open;
+  int32_t phs_result = (long)abs((int)phs - g_active_band.adc_phs_cal_open) * 1024 / phs_cal_diff;
   if (phs_result <= 0) 
   {
     phs_result = 1;
@@ -320,8 +346,8 @@ uint16_t swr_phs_cal_adjust(uint16_t phs)
 
 uint16_t swr_amp_cal_adjust(uint16_t amp)
 {
-  int amp_cal_diff = g_active_band.adc_amp_cal_open - g_active_band.adc_amp_cal_50ohm;
-  long amp_result = (long)abs((int)amp - g_active_band.adc_amp_cal_open) * ADC_DB_CENTER / amp_cal_diff + ADC_DB_CENTER;
+  int16_t amp_cal_diff = g_active_band.adc_amp_cal_open - g_active_band.adc_amp_cal_50ohm;
+  int32_t amp_result = (long)abs((int)amp - g_active_band.adc_amp_cal_open) * ADC_DB_CENTER / amp_cal_diff + ADC_DB_CENTER;
   if (amp_result <= ADC_DB_CENTER) 
   {
     amp_result = ADC_DB_CENTER + 1;
@@ -338,7 +364,7 @@ void swr_measure()
   g_pt.amp = 0;
   g_pt.phs = 0;
 
-  for (int i = 0; i < ADC_ITER_CNT; i++) 
+  for (uint8_t i = 0; i < ADC_ITER_CNT; i++) 
   {
     g_pt.amp += analogRead(PIN_SWR_AMP);
     g_pt.phs += analogRead(PIN_SWR_PHS);
@@ -406,7 +432,7 @@ void band_select_next()
   band_select(g_active_band_index);
 }
 
-void band_select(int index) 
+void band_select(uint8_t index) 
 {
   if (index < BANDS_CNT) 
   {
@@ -421,7 +447,7 @@ void band_select(int index)
   }
 }
 
-void band_rotate_frequency(int dir)
+void band_rotate_frequency(int8_t dir)
 {
   g_active_band.freq += dir * g_active_band.freq_step;
 
@@ -432,7 +458,7 @@ void band_rotate_frequency(int dir)
   generator_set_frequency(g_active_band.freq);
 }
 
-void band_rotate_step(int dir)
+void band_rotate_step(int8_t dir)
 {
   g_active_band.freq_step += dir * FREQ_STEP_INC;
 
@@ -530,7 +556,7 @@ void settings_select_prev_screen()
   }
 }
 
-void settings_rotate_screen(int dir)
+void settings_rotate_screen(int8_t dir)
 {
   if (dir == 1) 
   {
@@ -546,7 +572,7 @@ void settings_save()
 {  
 }
 
-void settings_rotate(int dir)
+void settings_rotate(int8_t dir)
 {
   if (g_settings_selected)
   {
@@ -621,11 +647,11 @@ void screen_select_next()
 
 void process_rotary() 
 {
-  unsigned char rotary_state = g_rotary.process();
+  uint8_t rotary_state = g_rotary.process();
   
   if (rotary_state) 
   {
-    int dir = (rotary_state == DIR_CW) ? -1 : 1;
+    int8_t dir = (rotary_state == DIR_CW) ? -1 : 1;
 
     switch (g_screen_state) 
     {
@@ -655,7 +681,7 @@ void process_rotary()
 
 void process_rotary_button() 
 {
-  unsigned char rotary_btn_state = g_rotary.process_button();
+  uint8_t rotary_btn_state = g_rotary.process_button();
 
   switch (rotary_btn_state) 
   {
@@ -692,7 +718,7 @@ void process_display_swr()
   
   float swr = g_pt.swr;
   
-  swr_list_store_center(g_pt.swr);
+  swr_list_store_center(g_pt.amp, g_pt.phs);
   swr_update_minimum_swr(g_pt.swr, 0);
 
   g_disp.clearDisplay();
@@ -713,10 +739,8 @@ void process_display_swr()
     case S_GRAPH_MANUAL:
       g_disp.print(g_pt.freq_khz);
       g_disp.print(F(" ")); g_disp.println(swr);
-
       swr_list_grid_draw();
       swr_list_draw();
-
       break;
 
     case S_SETTINGS:
