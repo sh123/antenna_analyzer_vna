@@ -482,22 +482,22 @@ void settings_draw()
   switch (g_settings_screen_state)
   {
     case S_SETTINGS_STEP:
-        g_disp.println(F("Freq step"));
+        g_disp.println(F("[FREQ STEP]"));
         g_disp.print(F("STEP: ")); 
           g_disp.print(TO_KHZ(g_active_band.freq_step));
           g_disp.println(F(" kHz"));
         break;
         
     case S_SETTINGS_CAL_50OHM:
-      g_disp.println(F("Cal 50 OHM"));
+      g_disp.println(F("[CAL 50 OHM]"));
       break;
       
     case S_SETTINGS_CAL_OPEN:
-      g_disp.println(F("Cal open"));
+      g_disp.println(F("[CAL OPEN]"));
       break;
       
     case S_SETTINGS_CAL_SHORT:
-      g_disp.println(F("Cal short"));
+      g_disp.println(F("[CAL SHORT]"));
       break;
 
     default:
