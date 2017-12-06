@@ -10,7 +10,7 @@ Arudino VNA Antenna Analyzer
 
 Introduction
 ------------
-Arudino based antenna VNA analyzer / plotter can be used to measure antenna
+Arduino based antenna VNA analyzer / plotter can be used to measure antenna
 SWR from 160m band up to 6m band.
 
 Next peripherals are in use:
