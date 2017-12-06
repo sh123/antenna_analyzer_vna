@@ -172,7 +172,7 @@ Adafruit_PCD8544 g_disp = Adafruit_PCD8544(PIN_PCD_CLK, PIN_PCD_DIN,
 
 void setup()
 {
-#ifdef DEBU_SERIAL
+#ifdef DEBUG_SERIAL
   Serial.begin(9600);
 #endif
 
