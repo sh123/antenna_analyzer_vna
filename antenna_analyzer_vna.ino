@@ -1,7 +1,7 @@
 /**
- *  Panoramic antenna analyzer based on si5341 clock 
- *    generator and pcd8544 Nokia 5110 display
- *
+ *  Panoramic antenna analyzer based on AD9850 clock 
+ *  generator, AD8302 phase/amplitude detector and 
+ *  pcd8544 Nokia 5110 display
  **/
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
@@ -106,16 +106,16 @@ struct measurement_t {
   int amp_adj;
   int phs_adj;
   
-  float rl_db;
-  float phi_deg;
+  float rl_db;    // return loss, S11
+  float phi_deg;  // phase shift angle
   
   float rho;
   
-  float rs;
-  float xs;
+  float rs;       // real impedance part
+  float xs;       // complex impedance part
   
   float swr;
-  float z;
+  float z;        // impedance vector length
 };
 
 // band state
@@ -269,8 +269,8 @@ void swr_list_grid_draw()
     for (unsigned char y = SWR_SCREEN_CHAR; y <= SWR_GRAPH_HEIGHT + SWR_GRAPH_CROP; y += SWR_GRAPH_HEIGHT / SWR_GRAPH_CROP) 
     {
       g_disp.drawPixel(x + 6, y + SWR_SCREEN_CHAR - 1, BLACK);
-    } // y
-  } // x
+    }
+  }
 }
 
 unsigned int swr_screen_normalize(double swr)
