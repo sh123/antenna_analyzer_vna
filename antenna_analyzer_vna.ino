@@ -261,6 +261,7 @@ void swr_list_sweep_and_fill()
       process_rotary_button();
 
       swr_measure();
+      swr_calculate();
       swr_update_minimum_swr(swr, TO_KHZ(freq_hz));
     }
     
@@ -345,17 +346,12 @@ void swr_measure()
 
   g_pt.amp /= ADC_ITER_CNT;
   g_pt.phs /= ADC_ITER_CNT;
-
-  swr_calculate(g_pt.amp, g_pt.phs);
 }
 
-void swr_calculate(int amp, int phs)
+void swr_calculate()
 {
-  g_pt.amp = amp;
-  g_pt.phs = phs;
-  
-  g_pt.amp_adj = swr_amp_cal_adjust(amp);
-  g_pt.phs_adj = swr_phs_cal_adjust(phs);
+  g_pt.amp_adj = swr_amp_cal_adjust(g_pt.amp);
+  g_pt.phs_adj = swr_phs_cal_adjust(g_pt.phs);
 
   g_pt.rl_db = fabs(((float)g_pt.amp_adj * ADC_DB_RES) + ADC_DB_OFFSET);
   g_pt.phi_deg = ((float)g_pt.phs_adj * ADC_DEG_RES);
@@ -692,9 +688,9 @@ void process_rotary_button()
 void process_display_swr() 
 {   
   swr_measure();
+  swr_calculate();
   
   float swr = g_pt.swr;
-  uint16_t z = g_pt.z;
   
   swr_list_store_center(g_pt.swr);
   swr_update_minimum_swr(g_pt.swr, 0);
