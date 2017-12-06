@@ -40,11 +40,14 @@
 
 // swr related parameters
 #define SWR_MAX           9999
-#define SWR_LIST_SIZE     84
 #define SWR_SCREEN_HEIGHT 48
+#define SWR_SCREEN_WIDTH  84
+#define SWR_LIST_SIZE     SWR_SCREEN_WIDTH
 #define SWR_SCREEN_CHAR   8
 #define SWR_GRAPH_HEIGHT  (SWR_SCREEN_HEIGHT - SWR_SCREEN_CHAR)
-#define SWR_GRAPH_CROP    6
+#define SWR_MAX_VALUE     6
+#define SWR_Z_MAX_OHM     60
+#define SWR_Z_MIN_OHM     40
 
 // generator related
 #define FREQ_STEP_INC     5000
@@ -69,8 +72,10 @@
 enum MAIN_SCREEN_STATE 
 {
   S_MAIN_SCREEN = 0,
-  S_GRAPH_MANUAL,
-  S_GRAPH_AUTOMATIC,
+  S_GRAPH_SWR,
+  S_GRAPH_SWR_AUTO,
+  S_GRAPH_Z,
+  S_GRAPH_Z_AUTO,
   S_SETTINGS
 };
 
@@ -256,6 +261,46 @@ void swr_list_store_center(int amp, int phs)
   g_phs_list[SWR_LIST_SIZE / 2] = phs;
 }
 
+void swr_list_grid_draw() 
+{
+  // center marker
+  g_disp.drawFastVLine(SWR_LIST_SIZE / 2, SWR_SCREEN_CHAR, SWR_SCREEN_CHAR / 2, BLACK);
+
+  // grid
+  for (uint8_t x = 0; x <= SWR_LIST_SIZE; x += SWR_LIST_SIZE / 12)
+  {
+    for (uint8_t y = 0; y <= SWR_GRAPH_HEIGHT; y += SWR_GRAPH_HEIGHT / SWR_MAX_VALUE)
+    {
+      g_disp.drawPixel(x + SWR_SCREEN_CHAR, y, BLACK);
+    }
+  }
+}
+
+uint8_t swr_screen_normalize(float swr)
+{  
+  float swr_norm = swr;
+  if (swr_norm > SWR_MAX_VALUE)
+  {
+    swr_norm = SWR_MAX_VALUE;
+  }
+  return swr_norm * (float)SWR_GRAPH_HEIGHT / (float)SWR_MAX_VALUE;
+}
+
+uint8_t swr_screen_z_normalize(float z)
+{ 
+  float z_norm = z;
+  if (z < SWR_Z_MIN_OHM)
+  {
+    z_norm = SWR_Z_MIN_OHM;
+  }
+  if (z > SWR_Z_MAX_OHM)
+  {
+    z_norm = SWR_Z_MAX_OHM;
+  }
+  z_norm -= SWR_Z_MIN_OHM;
+  return z_norm * (float)SWR_GRAPH_HEIGHT / (float)(SWR_Z_MAX_OHM - SWR_Z_MIN_OHM);
+}
+
 void swr_list_draw() 
 {  
   for (uint8_t i = 0; i < SWR_LIST_SIZE; i++) 
@@ -265,11 +310,29 @@ void swr_list_draw()
     
     swr_calculate();
 
-    uint8_t swr = swr_screen_normalize(g_pt.swr);
+    uint8_t swr_norm = swr_screen_normalize(g_pt.swr);
     
-    g_disp.drawFastVLine(i, SWR_SCREEN_HEIGHT - swr + SWR_GRAPH_CROP, swr - SWR_GRAPH_CROP, BLACK);
+    g_disp.drawFastVLine(i, SWR_SCREEN_HEIGHT - swr_norm, swr_norm, BLACK);
   }
 }
+
+void swr_list_z_draw()
+{  
+  for (uint8_t i = 0; i < SWR_LIST_SIZE; i++) 
+  {
+    g_pt.amp = g_amp_list[i];
+    g_pt.phs = g_phs_list[i];
+    
+    swr_calculate();
+
+    uint8_t rs = swr_screen_z_normalize(g_pt.rs);
+    uint8_t xs = swr_screen_z_normalize(g_pt.xs);
+    
+    g_disp.drawPixel(i, SWR_SCREEN_HEIGHT - rs, BLACK);
+    g_disp.drawPixel(i, SWR_SCREEN_HEIGHT - xs, BLACK);
+  }
+}
+
 
 void swr_list_sweep_and_fill() 
 {
@@ -298,30 +361,6 @@ void swr_list_sweep_and_fill()
   } // amp/phs list
 
   generator_set_frequency(g_active_band.freq);
-}
-
-void swr_list_grid_draw() 
-{
-  g_disp.drawFastVLine(SWR_LIST_SIZE / 2, SWR_SCREEN_CHAR, SWR_SCREEN_CHAR / 2, BLACK);
-
-  for (uint8_t x = 0; x <= SWR_LIST_SIZE; x += SWR_LIST_SIZE / 12) 
-  {
-    for (uint8_t y = SWR_SCREEN_CHAR; y <= SWR_GRAPH_HEIGHT + SWR_GRAPH_CROP; y += SWR_GRAPH_HEIGHT / SWR_GRAPH_CROP) 
-    {
-      g_disp.drawPixel(x + 6, y + SWR_SCREEN_CHAR - 1, BLACK);
-    }
-  }
-}
-
-uint8_t swr_screen_normalize(float swr)
-{  
-  uint8_t swr_norm = swr * (float)SWR_GRAPH_HEIGHT / (float)SWR_GRAPH_CROP;
-  
-  if (swr_norm > SWR_GRAPH_HEIGHT) 
-  {
-    swr_norm = SWR_GRAPH_HEIGHT;
-  }
-  return swr_norm;
 }
 
 void swr_update_minimum_swr(float swr, uint32_t freq_khz)
@@ -621,15 +660,23 @@ void screen_select_next()
   switch (g_screen_state) 
   {
     case S_MAIN_SCREEN:
-      g_screen_state = S_GRAPH_MANUAL;
+      g_screen_state = S_GRAPH_SWR;
       break;
 
-    case S_GRAPH_MANUAL:
-      g_screen_state = S_GRAPH_AUTOMATIC;
+    case S_GRAPH_SWR:
+      g_screen_state = S_GRAPH_SWR_AUTO;
       swr_list_sweep_and_fill();
       break;
 
-    case S_GRAPH_AUTOMATIC:
+    case S_GRAPH_SWR_AUTO:
+      g_screen_state = S_GRAPH_Z;
+      break;
+
+    case S_GRAPH_Z:
+      g_screen_state = S_GRAPH_Z_AUTO;
+      break;
+
+    case S_GRAPH_Z_AUTO:
       g_screen_state = S_SETTINGS;
       break;
 
@@ -655,12 +702,14 @@ void process_rotary()
 
     switch (g_screen_state) 
     {
-      case S_GRAPH_AUTOMATIC:
+      case S_GRAPH_SWR_AUTO:
+      case S_GRAPH_Z_AUTO:
         band_rotate_frequency(dir);
         break;
 
       case S_MAIN_SCREEN:
-      case S_GRAPH_MANUAL:
+      case S_GRAPH_SWR:
+      case S_GRAPH_Z:
         band_rotate_frequency(dir);
         if (rotary_state == DIR_CW) 
           swr_list_shift_right();
@@ -726,25 +775,37 @@ void process_display_swr()
   g_disp.setTextColor(BLACK);
   g_disp.setCursor(0,0);
 
+  if (g_screen_state == S_GRAPH_SWR_AUTO || g_screen_state == S_GRAPH_Z_AUTO)
+  {
+      g_disp.print(F("A "));
+      swr_list_sweep_and_fill();  
+  }
+  
   switch (g_screen_state) 
   {
     case S_MAIN_SCREEN:
       swr_print_info();
       break;
 
-    case S_GRAPH_AUTOMATIC:
-      g_disp.print(F("A "));
-      swr_list_sweep_and_fill();
-
-    case S_GRAPH_MANUAL:
+    case S_GRAPH_SWR:
       g_disp.print(g_pt.freq_khz);
       g_disp.print(F(" ")); g_disp.println(swr);
       swr_list_grid_draw();
       swr_list_draw();
       break;
 
+    case S_GRAPH_Z:
+      g_disp.print(g_pt.freq_khz);
+      g_disp.print(F(" ")); g_disp.println(g_pt.z);
+      swr_list_grid_draw();
+      swr_list_z_draw();
+      break;
+
     case S_SETTINGS:
       settings_draw();
+      break;
+
+    default:
       break;
 
   } // screen state
