@@ -40,14 +40,24 @@
 
 // swr related parameters
 #define SWR_MAX           9999
+
 #define SWR_SCREEN_HEIGHT 48
 #define SWR_SCREEN_WIDTH  84
-#define SWR_LIST_SIZE     SWR_SCREEN_WIDTH
+
 #define SWR_SCREEN_CHAR   8
+#define SWR_LIST_SIZE     SWR_SCREEN_WIDTH
 #define SWR_GRAPH_HEIGHT  (SWR_SCREEN_HEIGHT - SWR_SCREEN_CHAR)
-#define SWR_MAX_VALUE     6
-#define SWR_Z_MAX_OHM     60
-#define SWR_Z_MIN_OHM     40
+
+#define SWR_MAX_VALUE     4
+#define SWR_Z_MAX_OHM     100
+#define SWR_Z_MIN_OHM     0
+
+#define SWR_GRID_COUNT_X  12
+#define SWR_GRID_STEP_X   SWR_LIST_SIZE / SWR_GRID_COUNT_X
+#define SWR_GRID_PAD_X    ((SWR_LIST_SIZE - 1) % SWR_GRID_STEP_X) / 2
+
+#define SWR_GRID_COUNT_Y  SWR_MAX_VALUE
+#define SWR_GRID_STEP_Y   SWR_GRAPH_HEIGHT / SWR_GRID_COUNT_Y
 
 // generator related
 #define FREQ_STEP_INC     5000
@@ -233,9 +243,6 @@ void swr_list_clear()
 
 void swr_list_shift_right() 
 {
-  g_amp_list[0] = 0;
-  g_phs_list[0] = 0;
-  
   for (uint8_t i = SWR_LIST_SIZE - 2; i != 0; i--) 
   {
     g_amp_list[i + 1] = g_amp_list[i];
@@ -245,9 +252,6 @@ void swr_list_shift_right()
 
 void swr_list_shift_left() 
 {
-  g_amp_list[SWR_LIST_SIZE - 1] = 0;
-  g_phs_list[SWR_LIST_SIZE - 1] = 0;
-  
   for (uint8_t i = 0; i < SWR_LIST_SIZE - 2; i++) 
   {
     g_amp_list[i] = g_amp_list[i + 1];
@@ -267,18 +271,18 @@ void swr_list_grid_draw()
   g_disp.drawFastVLine(SWR_LIST_SIZE / 2, SWR_SCREEN_CHAR, SWR_SCREEN_CHAR / 2, BLACK);
 
   // grid
-  for (uint8_t x = 0; x <= SWR_LIST_SIZE; x += SWR_LIST_SIZE / 12)
+  for (uint8_t x = 0; x <= SWR_LIST_SIZE; x += SWR_GRID_STEP_X)
   {
-    for (uint8_t y = 0; y <= SWR_GRAPH_HEIGHT; y += SWR_GRAPH_HEIGHT / SWR_MAX_VALUE)
+    for (uint8_t y = 0; y <= SWR_GRAPH_HEIGHT - SWR_GRID_STEP_Y; y += SWR_GRID_STEP_Y)
     {
-      g_disp.drawPixel(x + SWR_SCREEN_CHAR, y, BLACK);
+      g_disp.drawPixel(x + SWR_GRID_PAD_X, SWR_GRAPH_HEIGHT - y + 1, BLACK);
     }
   }
 }
 
 uint8_t swr_screen_normalize(float swr)
 {  
-  float swr_norm = swr;
+  float swr_norm = swr - 1;
   if (swr_norm > SWR_MAX_VALUE)
   {
     swr_norm = SWR_MAX_VALUE;
@@ -311,13 +315,16 @@ void swr_list_draw()
     swr_calculate();
 
     uint8_t swr_norm = swr_screen_normalize(g_pt.swr);
-    
+
     g_disp.drawFastVLine(i, SWR_SCREEN_HEIGHT - swr_norm, swr_norm, BLACK);
   }
 }
 
 void swr_list_z_draw()
 {  
+  uint8_t prev_rs;
+  uint8_t prev_xs;
+  
   for (uint8_t i = 0; i < SWR_LIST_SIZE; i++) 
   {
     g_pt.amp = g_amp_list[i];
@@ -327,9 +334,15 @@ void swr_list_z_draw()
 
     uint8_t rs = swr_screen_z_normalize(g_pt.rs);
     uint8_t xs = swr_screen_z_normalize(g_pt.xs);
-    
-    g_disp.drawPixel(i, SWR_SCREEN_HEIGHT - rs, BLACK);
-    g_disp.drawPixel(i, SWR_SCREEN_HEIGHT - xs, BLACK);
+
+    if (i > 0) 
+    {
+      g_disp.drawLine(i - 1, SWR_SCREEN_HEIGHT - prev_rs, i, SWR_SCREEN_HEIGHT - rs, BLACK);
+      g_disp.drawLine(i - 1, SWR_SCREEN_HEIGHT - prev_xs, i, SWR_SCREEN_HEIGHT - xs, BLACK);
+    }
+
+    prev_rs = rs;
+    prev_xs = xs;
   }
 }
 
@@ -516,27 +529,27 @@ void settings_draw()
 {
   if (g_settings_selected) 
   {
-    g_disp.print(F("* "));  
+    g_disp.print(F("*"));  
   }
   switch (g_settings_screen_state)
   {
     case S_SETTINGS_STEP:
-        g_disp.println(F("[FREQ STEP]"));
+        g_disp.println(F("<FREQ STEP>\n"));
         g_disp.print(F("STEP: ")); 
           g_disp.print(TO_KHZ(g_active_band.freq_step));
           g_disp.println(F(" kHz"));
         break;
         
     case S_SETTINGS_CAL_50OHM:
-      g_disp.println(F("[CAL 50 OHM]"));
+      g_disp.println(F("<CAL 50 OHM>\n"));
       break;
       
     case S_SETTINGS_CAL_OPEN:
-      g_disp.println(F("[CAL OPEN]"));
+      g_disp.println(F("<CAL OPEN>\n"));
       break;
       
     case S_SETTINGS_CAL_SHORT:
-      g_disp.println(F("[CAL SHORT]"));
+      g_disp.println(F("<CAL SHORT>\n"));
       break;
 
     default:
@@ -766,6 +779,8 @@ void process_display_swr()
   swr_calculate();
   
   float swr = g_pt.swr;
+  float rs = g_pt.rs;
+  float xs = g_pt.xs;
   
   swr_list_store_center(g_pt.amp, g_pt.phs);
   swr_update_minimum_swr(g_pt.swr, 0);
@@ -777,7 +792,7 @@ void process_display_swr()
 
   if (g_screen_state == S_GRAPH_SWR_AUTO || g_screen_state == S_GRAPH_Z_AUTO)
   {
-      g_disp.print(F("A "));
+      g_disp.print(F("*"));
       swr_list_sweep_and_fill();  
   }
   
@@ -787,16 +802,18 @@ void process_display_swr()
       swr_print_info();
       break;
 
+    case S_GRAPH_SWR_AUTO:
     case S_GRAPH_SWR:
-      g_disp.print(g_pt.freq_khz);
-      g_disp.print(F(" ")); g_disp.println(swr);
+      g_disp.print(g_pt.freq_khz); g_disp.print(F(" ")); g_disp.println(swr);
       swr_list_grid_draw();
       swr_list_draw();
       break;
 
+    case S_GRAPH_Z_AUTO:
     case S_GRAPH_Z:
+      g_disp.print((uint32_t)rs); g_disp.print(F("+j")); g_disp.println((uint32_t)xs);
+      g_disp.setCursor(0, SWR_SCREEN_HEIGHT - SWR_SCREEN_CHAR);
       g_disp.print(g_pt.freq_khz);
-      g_disp.print(F(" ")); g_disp.println(g_pt.z);
       swr_list_grid_draw();
       swr_list_z_draw();
       break;
