@@ -1,4 +1,4 @@
-# antenna_analyzer
+# antenna_analyzer_vna
 Arduino 160 to 6m band VNA antenna analyzer based on AD9850 module.
 
 Influenced by 
@@ -10,8 +10,8 @@ Arudino VNA Antenna Analyzer
 
 Introduction
 ------------
-Arudino based antenna VNA analyzer / plotter can be used to measure antenna
-SWR from 160m band up to 6m band.
+Arduino based antenna VNA analyzer / plotter can be used to measure antenna
+SWR from 160m band up to 6m band, real/complex impedance, return loss (s11).
 
 Next peripherals are in use:
 
