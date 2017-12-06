@@ -48,6 +48,7 @@
 
 #define ADC_ITER_CNT      16
 #define ADC_DB_RES        60.0 / 1024.0
+#define ADC_DB_CENTER     1024 / 2
 #define ADC_DB_OFFSET     (-30.0)
 #define ADC_DEG_RES       180.0 / 1024.0
 
@@ -98,12 +99,10 @@ struct measurement_t {
   uint32_t freq_khz;
 
   // read from adc
-  
   int amp;      // amplitude
   int phs;      // phase
 
   // adjusted by calibration
-  
   int amp_adj;
   int phs_adj;
   
@@ -117,13 +116,12 @@ struct measurement_t {
   
   float swr;
   float z;
-  
-} g_pt;
-
+};
 
 // band state
 int g_active_band_index = 0;
 struct band_map_t g_active_band;
+struct measurement_t g_pt;
 
 // swr state
 long g_freq_min;
@@ -158,8 +156,9 @@ void setup()
 
   g_timer.setInterval(500, process_display_swr);
   g_timer.setInterval(100, process_rotary_button);
-  //attachInterrupt(digitalPinToInterrupt(PIN_ROTARY_BTN), process_rotary_button, CHANGE);
   g_timer.setInterval(1, process_rotary);
+  
+  //attachInterrupt(digitalPinToInterrupt(PIN_ROTARY_BTN), process_rotary_button, CHANGE);
   //attachInterrupt(digitalPinToInterrupt(PIN_ROTARY_CLK), process_rotary, CHANGE);
 
   g_disp.begin();
@@ -188,7 +187,8 @@ void generator_set_frequency(uint32_t freq)
 
 void swr_list_clear() 
 {
-  for (int i = 0; i < SWR_LIST_SIZE; i++) {
+  for (int i = 0; i < SWR_LIST_SIZE; i++) 
+  {
     g_swr_list[i] = 0;
   }
 }
@@ -197,7 +197,8 @@ void swr_list_shift_right()
 {
   g_swr_list[0] = 0;
   
-  for (int i = SWR_LIST_SIZE - 2; i != 0; i--) {
+  for (int i = SWR_LIST_SIZE - 2; i != 0; i--) 
+  {
     g_swr_list[i + 1] = g_swr_list[i];
   }
 }
@@ -206,7 +207,8 @@ void swr_list_shift_left()
 {
   g_swr_list[SWR_LIST_SIZE - 1] = 0;
   
-  for (int i = 0; i < SWR_LIST_SIZE - 2; i++) {
+  for (int i = 0; i < SWR_LIST_SIZE - 2; i++) 
+  {
     g_swr_list[i] = g_swr_list[i + 1];
   }
 }
@@ -218,10 +220,10 @@ void swr_list_store_center(double swr)
 
 void swr_list_draw() 
 {  
-  for (int i = 0; i < SWR_LIST_SIZE; i++) {
-    
-    if (g_swr_list[i] != 0) {
-      
+  for (int i = 0; i < SWR_LIST_SIZE; i++) 
+  {
+    if (g_swr_list[i] != 0)
+    {
       g_disp.drawFastVLine(i, SWR_SCREEN_HEIGHT - g_swr_list[i] + SWR_GRAPH_CROP, g_swr_list[i] - SWR_GRAPH_CROP, BLACK);
       
       process_rotary();
@@ -236,9 +238,10 @@ void swr_list_sweep_and_fill()
 
   double swr = SWR_MAX;
     
-  for (int i = 0; i < SWR_LIST_SIZE; i++) {
-
-    if (VALID_RANGE(freq_hz)) {
+  for (int i = 0; i < SWR_LIST_SIZE; i++) 
+  {
+    if (VALID_RANGE(freq_hz)) 
+    {
       generator_set_frequency(freq_hz);
       
       process_rotary();
@@ -261,14 +264,12 @@ void swr_list_grid_draw()
 {
   g_disp.drawFastVLine(SWR_LIST_SIZE / 2, SWR_SCREEN_CHAR, SWR_SCREEN_CHAR / 2, BLACK);
 
-  for (unsigned char x = 0; x <= SWR_LIST_SIZE; x += SWR_LIST_SIZE / 12) {
-    
-    for (unsigned char y = SWR_SCREEN_CHAR; y <= SWR_GRAPH_HEIGHT + SWR_GRAPH_CROP; y += SWR_GRAPH_HEIGHT / SWR_GRAPH_CROP) {
-
+  for (unsigned char x = 0; x <= SWR_LIST_SIZE; x += SWR_LIST_SIZE / 12) 
+  {
+    for (unsigned char y = SWR_SCREEN_CHAR; y <= SWR_GRAPH_HEIGHT + SWR_GRAPH_CROP; y += SWR_GRAPH_HEIGHT / SWR_GRAPH_CROP) 
+    {
       g_disp.drawPixel(x + 6, y + SWR_SCREEN_CHAR - 1, BLACK);
-
     } // y
-    
   } // x
 }
 
@@ -276,7 +277,8 @@ unsigned int swr_screen_normalize(double swr)
 {  
   unsigned int swr_norm = swr * (double)SWR_GRAPH_HEIGHT / (double)SWR_GRAPH_CROP;
   
-  if (swr_norm > SWR_GRAPH_HEIGHT) {
+  if (swr_norm > SWR_GRAPH_HEIGHT) 
+  {
     swr_norm = SWR_GRAPH_HEIGHT;
   }
   return swr_norm;
@@ -284,7 +286,8 @@ unsigned int swr_screen_normalize(double swr)
 
 void swr_update_minimum_swr(double swr, long freq_khz)
 {
-  if (swr < g_swr_min) {
+  if (swr < g_swr_min) 
+  {
     g_swr_min = swr;
     g_freq_min = freq_khz;
   }
@@ -294,7 +297,8 @@ uint16_t swr_phs_cal_adjust(uint16_t phs)
 {
   int phs_cal_diff = g_active_band.adc_phs_cal_short - g_active_band.adc_phs_cal_open;
   long phs_result = (long)abs((int)phs - g_active_band.adc_phs_cal_open) * 1024 / phs_cal_diff;
-  if (phs_result <= 0) {
+  if (phs_result <= 0) 
+  {
     phs_result = 1;
   }
   return phs_result;
@@ -303,9 +307,10 @@ uint16_t swr_phs_cal_adjust(uint16_t phs)
 uint16_t swr_amp_cal_adjust(uint16_t amp)
 {
   int amp_cal_diff = g_active_band.adc_amp_cal_open - g_active_band.adc_amp_cal_50ohm;
-  long amp_result = (long)abs((int)amp - g_active_band.adc_amp_cal_open) * 512 / amp_cal_diff + 512;
-  if (amp_result <= 512) {
-    amp_result = 513;
+  long amp_result = (long)abs((int)amp - g_active_band.adc_amp_cal_open) * ADC_DB_CENTER / amp_cal_diff + ADC_DB_CENTER;
+  if (amp_result <= ADC_DB_CENTER) 
+  {
+    amp_result = ADC_DB_CENTER + 1;
   }
   return amp_result;
 }
@@ -317,7 +322,8 @@ void swr_measure()
   g_pt.amp = 0;
   g_pt.phs = 0;
 
-  for (int i = 0; i < ADC_ITER_CNT; i++) {
+  for (int i = 0; i < ADC_ITER_CNT; i++) 
+  {
     g_pt.amp += analogRead(PIN_SWR_AMP);
     g_pt.phs += analogRead(PIN_SWR_PHS);
   }
@@ -327,8 +333,6 @@ void swr_measure()
 
   g_pt.amp_adj = swr_amp_cal_adjust(g_pt.amp);
   g_pt.phs_adj = swr_phs_cal_adjust(g_pt.phs);
-
-  if (g_pt.amp_adj == 512) g_pt.amp_adj = 511;
 
   g_pt.rl_db = fabs(((float)g_pt.amp_adj * ADC_DB_RES) + ADC_DB_OFFSET);
   g_pt.phi_deg = ((float)g_pt.phs_adj * ADC_DEG_RES);
@@ -353,20 +357,21 @@ void swr_measure()
 void swr_print_info()
 {
   g_disp.print(g_active_band.band_name); g_disp.print(F(": ")); 
-  g_disp.print(g_pt.freq_khz); g_disp.println(F(" k"));
+    g_disp.print(g_pt.freq_khz); g_disp.println(F(" k"));
+  
   g_disp.print(F("SWR: ")); g_disp.println(g_pt.swr);  
+  
   g_disp.print(F("S11: ") );g_disp.print(g_pt.rl_db); 
     g_disp.println(F("dB"));
+    
   g_disp.print(F("Z:")); g_disp.println(g_pt.z);
+  
   g_disp.print(F("R:")); g_disp.print((uint16_t)g_pt.rs); 
     g_disp.print(F("+j")); g_disp.println((uint16_t)g_pt.xs); 
+    
   g_disp.print(F("p:")); g_disp.print((uint16_t)g_pt.phi_deg); 
     g_disp.print(F(" ")); g_disp.print(g_pt.phs); 
     g_disp.print(F("/")); g_disp.println(g_pt.amp); 
-  /*
-  g_disp.println(F("MIN:"));
-  g_disp.print(g_swr_min); g_disp.print(F(" ")); g_disp.println(g_freq_min);
-  */
 }
 
 /* --------------------------------------------------------------------------*/
@@ -375,7 +380,8 @@ void band_select_next()
 {
   g_active_band_index += 1;
   
-  if (g_active_band_index >= BANDS_CNT) {
+  if (g_active_band_index >= BANDS_CNT) 
+  {
     g_active_band_index = 0;
   }
 
@@ -384,8 +390,8 @@ void band_select_next()
 
 void band_select(int index) 
 {
-  if (index < BANDS_CNT) {
-
+  if (index < BANDS_CNT) 
+  {
     memcpy_PF((void*)&g_active_band, (uint_farptr_t)&g_bands[index], sizeof(g_bands[index]));
     
     swr_list_clear();
@@ -401,7 +407,8 @@ void band_rotate_frequency(int dir)
 {
   g_active_band.freq += dir * g_active_band.freq_step;
 
-  if (g_active_band.freq > FREQ_MAX) {
+  if (g_active_band.freq > FREQ_MAX) 
+  {
     g_active_band.freq = FREQ_MAX;
   }
   
@@ -412,7 +419,8 @@ void band_rotate_step(int dir)
 {
   g_active_band.freq_step += dir * FREQ_STEP_INC;
 
-  if (g_active_band.freq_step > FREQ_STEP_MAX) { 
+  if (g_active_band.freq_step > FREQ_STEP_MAX) 
+  { 
     if (dir < 0)
       g_active_band.freq_step = 0;
     if (dir > 0)
@@ -424,8 +432,8 @@ void band_rotate_step(int dir)
 
 void screen_select_next() 
 {
-  switch (g_screen_state) {
-
+  switch (g_screen_state) 
+  {
     case S_MAIN_SCREEN:
       g_screen_state = S_GRAPH_MANUAL;
       break;
@@ -455,12 +463,12 @@ void process_rotary()
 {
   unsigned char rotary_state = g_rotary.process();
   
-  if (rotary_state) {
-
+  if (rotary_state) 
+  {
     int dir = (rotary_state == DIR_CW) ? -1 : 1;
 
-    switch (g_screen_state) {
-
+    switch (g_screen_state) 
+    {
       case S_GRAPH_AUTOMATIC:
         band_rotate_frequency(dir);
         break;
@@ -489,12 +497,12 @@ void process_rotary_button()
 {
   unsigned char rotary_btn_state = g_rotary.process_button();
 
-  switch (rotary_btn_state) {
-
+  switch (rotary_btn_state) 
+  {
     case BTN_RELEASED:
     
-      switch (g_screen_state) {
-        
+      switch (g_screen_state) 
+      {
         case S_SETTINGS:
           break;
           
@@ -532,8 +540,8 @@ void process_display_swr()
   g_disp.setTextColor(BLACK);
   g_disp.setCursor(0,0);
 
-  switch (g_screen_state) {
-
+  switch (g_screen_state) 
+  {
     case S_MAIN_SCREEN:
     
       swr_print_info();
@@ -574,8 +582,8 @@ void loop()
 {
   g_timer.run();
   
-  if (g_do_update) {
-    
+  if (g_do_update) 
+  {
     process_display_swr();
     g_do_update = false;
   }
