@@ -219,7 +219,7 @@ void generator_set_frequency(uint32_t freq)
 
 void swr_list_clear() 
 {
-  for (int i = 0; i < SWR_LIST_SIZE; i++) 
+  for (uint8_t i = 0; i < SWR_LIST_SIZE; i++) 
   {
     g_amp_list[i] = 0;
     g_phs_list[i] = 0;
@@ -231,7 +231,7 @@ void swr_list_shift_right()
   g_amp_list[0] = 0;
   g_phs_list[0] = 0;
   
-  for (int i = SWR_LIST_SIZE - 2; i != 0; i--) 
+  for (uint8_t i = SWR_LIST_SIZE - 2; i != 0; i--) 
   {
     g_amp_list[i + 1] = g_amp_list[i];
     g_phs_list[i + 1] = g_phs_list[i];
@@ -243,7 +243,7 @@ void swr_list_shift_left()
   g_amp_list[SWR_LIST_SIZE - 1] = 0;
   g_phs_list[SWR_LIST_SIZE - 1] = 0;
   
-  for (int i = 0; i < SWR_LIST_SIZE - 2; i++) 
+  for (uint8_t i = 0; i < SWR_LIST_SIZE - 2; i++) 
   {
     g_amp_list[i] = g_amp_list[i + 1];
     g_phs_list[i] = g_phs_list[i + 1];
