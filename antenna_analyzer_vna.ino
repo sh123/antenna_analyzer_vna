@@ -56,15 +56,24 @@
 #define TO_KHZ(freq)      (freq / 1000)
 #define VALID_RANGE(freq) (freq < FREQ_MAX)
 
-enum MAIN_SCREEN_STATE {
+enum MAIN_SCREEN_STATE 
+{
   S_MAIN_SCREEN = 0,
   S_GRAPH_MANUAL,
   S_GRAPH_AUTOMATIC,
   S_SETTINGS
 };
 
-struct band_map_t {
-  
+enum SETTINGS_STATE 
+{
+  S_SETTINGS_STEP = 0,
+  S_SETTINGS_CAL_50OHM,
+  S_SETTINGS_CAL_OPEN,
+  S_SETTINGS_CAL_SHORT
+};
+
+struct band_map_t 
+{
   uint32_t freq;
   uint32_t freq_step;
   
@@ -94,8 +103,8 @@ struct band_map_t {
   {  50100000, 100000, "6m ", 800, 550, 170, 800 }
 };
 
-struct measurement_t {
-  
+struct measurement_t 
+{  
   uint32_t freq_khz;
 
   // read from adc
@@ -121,9 +130,9 @@ struct measurement_t {
 // band state
 int g_active_band_index = 0;
 struct band_map_t g_active_band;
-struct measurement_t g_pt;
 
 // swr state
+struct measurement_t g_pt;
 long g_freq_min;
 double g_swr_min;
 unsigned char g_swr_list[SWR_LIST_SIZE];
@@ -131,6 +140,10 @@ unsigned char g_swr_list[SWR_LIST_SIZE];
 // UI state
 bool g_do_update = true;
 MAIN_SCREEN_STATE g_screen_state = S_MAIN_SCREEN;
+
+// UI state, settings
+bool g_settings_selected = false;
+SETTINGS_STATE g_settings_screen_state = S_SETTINGS_STEP;
 
 // peripherals
 SimpleTimer g_timer;
@@ -315,6 +328,8 @@ uint16_t swr_amp_cal_adjust(uint16_t amp)
   return amp_result;
 }
 
+/* --------------------------------------------------------------------------*/
+
 void swr_measure()
 {
   g_pt.freq_khz = TO_KHZ(g_active_band.freq);
@@ -384,7 +399,6 @@ void band_select_next()
   {
     g_active_band_index = 0;
   }
-
   band_select(g_active_band_index);
 }
 
@@ -411,7 +425,6 @@ void band_rotate_frequency(int dir)
   {
     g_active_band.freq = FREQ_MAX;
   }
-  
   generator_set_frequency(g_active_band.freq);
 }
 
@@ -425,6 +438,149 @@ void band_rotate_step(int dir)
       g_active_band.freq_step = 0;
     if (dir > 0)
       g_active_band.freq_step = FREQ_STEP_MAX;
+  }
+}
+
+/* --------------------------------------------------------------------------*/
+
+void settings_draw()
+{
+  if (g_settings_selected) 
+  {
+    g_disp.print(F("* "));  
+  }
+  switch (g_settings_screen_state)
+  {
+    case S_SETTINGS_STEP:
+        g_disp.println(F("Freq step"));
+        g_disp.print(F("STEP: ")); 
+          g_disp.print(TO_KHZ(g_active_band.freq_step));
+          g_disp.println(F(" kHz"));
+        break;
+        
+    case S_SETTINGS_CAL_50OHM:
+      g_disp.println(F("Cal 50 OHM"));
+      break;
+      
+    case S_SETTINGS_CAL_OPEN:
+      g_disp.println(F("Cal open"));
+      break;
+      
+    case S_SETTINGS_CAL_SHORT:
+      g_disp.println(F("Cal short"));
+      break;
+
+    default:
+      break;
+      
+  } // settings screen 
+}
+
+void settings_select_next_screen()
+{  
+  switch (g_settings_screen_state)
+  {
+    case S_SETTINGS_STEP:
+      g_settings_screen_state = S_SETTINGS_CAL_50OHM;
+      break;
+        
+    case S_SETTINGS_CAL_50OHM:
+      g_settings_screen_state = S_SETTINGS_CAL_OPEN;
+      break;
+      
+    case S_SETTINGS_CAL_OPEN:
+      g_settings_screen_state = S_SETTINGS_CAL_SHORT;
+      break;
+      
+    case S_SETTINGS_CAL_SHORT:
+      g_settings_screen_state = S_SETTINGS_STEP;
+      break;
+
+    default:
+      break;
+  }
+}
+
+void settings_select_prev_screen()
+{
+  switch (g_settings_screen_state)
+  {
+    case S_SETTINGS_STEP:
+      g_settings_screen_state = S_SETTINGS_CAL_SHORT;
+      break;
+        
+    case S_SETTINGS_CAL_50OHM:
+      g_settings_screen_state = S_SETTINGS_STEP;
+      break;
+      
+    case S_SETTINGS_CAL_OPEN:
+      g_settings_screen_state = S_SETTINGS_CAL_50OHM;
+      break;
+      
+    case S_SETTINGS_CAL_SHORT:
+      g_settings_screen_state = S_SETTINGS_CAL_OPEN;
+      break;
+
+    default:
+      break;
+  }
+}
+
+void settings_rotate_screen(int dir)
+{
+  if (dir == 1) 
+  {
+    settings_select_next_screen();  
+  }
+  else 
+  {
+    settings_select_prev_screen();
+  }
+}
+
+void settings_save()
+{  
+}
+
+void settings_rotate(int dir)
+{
+  if (g_settings_selected)
+  {
+    switch (g_settings_screen_state) 
+    {
+      case S_SETTINGS_STEP:
+        band_rotate_step(dir);
+        break;
+        
+      case S_SETTINGS_CAL_50OHM:
+        break;
+      
+      case S_SETTINGS_CAL_OPEN:
+        break;
+
+      case S_SETTINGS_CAL_SHORT:
+        break;
+        
+      default:
+        break;  
+    }
+  }
+  else 
+  {
+    settings_rotate_screen(dir);  
+  }
+}
+
+void settings_process_button()
+{
+  if (g_settings_selected)
+  {
+    settings_save();
+    g_settings_selected = false;
+  }
+  else 
+  {
+    g_settings_selected = true;
   }
 }
 
@@ -454,7 +610,7 @@ void screen_select_next()
      default:
        break;
        
-  } // current screen state
+  }
 }
 
 /* --------------------------------------------------------------------------*/
@@ -483,7 +639,7 @@ void process_rotary()
         break;
 
       case S_SETTINGS:
-        band_rotate_step(dir);
+        settings_rotate(dir);
         break;
         
     } // screen state
@@ -504,14 +660,14 @@ void process_rotary_button()
       switch (g_screen_state) 
       {
         case S_SETTINGS:
+          settings_process_button();
           break;
           
         default:
           band_select_next(); 
           g_do_update = true;
           break;
-          
-      } // screen state
+      }
       break;
 
     case BTN_PRESSED_LONG:
@@ -543,18 +699,14 @@ void process_display_swr()
   switch (g_screen_state) 
   {
     case S_MAIN_SCREEN:
-    
       swr_print_info();
-      
       break;
 
     case S_GRAPH_AUTOMATIC:
-   
       g_disp.print(F("A "));
       swr_list_sweep_and_fill();
 
     case S_GRAPH_MANUAL:
-
       g_disp.print(g_pt.freq_khz);
       g_disp.print(F(" ")); g_disp.println(swr);
 
@@ -564,11 +716,7 @@ void process_display_swr()
       break;
 
     case S_SETTINGS:
-
-      g_disp.print(F("STEP: ")); 
-      g_disp.print(TO_KHZ(g_active_band.freq_step));
-      g_disp.print(F(" kHz"));
-
+      settings_draw();
       break;
 
   } // screen state
