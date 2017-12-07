@@ -41,6 +41,7 @@
 // swr related parameters
 #define SWR_MAX           9999
 
+#define SWR_SCREEN_CNTRST 60
 #define SWR_SCREEN_HEIGHT 48
 #define SWR_SCREEN_WIDTH  84
 
@@ -212,10 +213,7 @@ void setup()
   //attachInterrupt(digitalPinToInterrupt(PIN_ROTARY_CLK), process_rotary, CHANGE);
 
   g_disp.begin();
-  g_disp.setContrast(60);
-  g_disp.display();
-  delay(100);
-  g_disp.clearDisplay();
+  g_disp.setContrast(SWR_SCREEN_CNTRST);
   g_disp.display();
 }
 
