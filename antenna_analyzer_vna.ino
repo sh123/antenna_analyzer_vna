@@ -96,6 +96,7 @@ enum MAIN_SCREEN_STATE
 enum SETTINGS_SCREEN_STATE
 {
   S_SETTINGS_STEP = 0,
+  S_SETTINGS_CONTRAST,
   S_SETTINGS_CAL_50OHM,
   S_SETTINGS_CAL_OPEN,
   S_SETTINGS_CAL_SHORT
@@ -585,7 +586,13 @@ void settings_draw()
           g_disp.print(TO_KHZ(g_active_band.freq_step));
           g_disp.println(F(" kHz"));
         break;
-        
+
+    case S_SETTINGS_CONTRAST:
+      g_disp.println(F("<CONTRAST>\n"));
+      g_disp.print(F("CONTRAST: "));
+        g_disp.println(SWR_SCREEN_CNTRST);
+      break;
+          
     case S_SETTINGS_CAL_50OHM:
       g_disp.println(F("<CAL 50 OHM>\n"));
       break;
@@ -609,9 +616,13 @@ void settings_select_next_screen()
   switch (g_settings_screen_state)
   {
     case S_SETTINGS_STEP:
+      g_settings_screen_state = S_SETTINGS_CONTRAST;
+      break;
+      
+    case S_SETTINGS_CONTRAST:
       g_settings_screen_state = S_SETTINGS_CAL_50OHM;
       break;
-        
+      
     case S_SETTINGS_CAL_50OHM:
       g_settings_screen_state = S_SETTINGS_CAL_OPEN;
       break;
@@ -636,9 +647,13 @@ void settings_select_prev_screen()
     case S_SETTINGS_STEP:
       g_settings_screen_state = S_SETTINGS_CAL_SHORT;
       break;
-        
-    case S_SETTINGS_CAL_50OHM:
+
+    case S_SETTINGS_CONTRAST:
       g_settings_screen_state = S_SETTINGS_STEP;
+      break;
+   
+    case S_SETTINGS_CAL_50OHM:
+      g_settings_screen_state = S_SETTINGS_CONTRAST;
       break;
       
     case S_SETTINGS_CAL_OPEN:
@@ -678,6 +693,9 @@ void settings_rotate(int8_t dir)
     {
       case S_SETTINGS_STEP:
         band_rotate_step(dir);
+        break;
+
+      case S_SETTINGS_CONTRAST:
         break;
         
       case S_SETTINGS_CAL_50OHM:
@@ -868,14 +886,18 @@ void process_display_swr()
 
     case S_GRAPH_SWR_AUTO:
     case S_GRAPH_SWR:
-      g_disp.print(g_pt.freq_khz); g_disp.print(F(" ")); g_disp.println(swr);
+      g_disp.print(g_pt.freq_khz); 
+        g_disp.print(F(" ")); 
+        g_disp.println(swr);
       swr_list_grid_draw();
       swr_list_draw();
       break;
 
     case S_GRAPH_Z_AUTO:
     case S_GRAPH_Z:
-      g_disp.print((uint32_t)rs); g_disp.print(F("+j")); g_disp.println((uint32_t)xs);
+      g_disp.print((uint32_t)rs); 
+        g_disp.print(F("+j")); 
+        g_disp.println((uint32_t)xs);
       g_disp.setCursor(0, SWR_SCREEN_HEIGHT - SWR_SCREEN_CHAR);
       g_disp.print(g_pt.freq_khz);
       swr_list_grid_draw();
@@ -885,7 +907,9 @@ void process_display_swr()
 #ifdef USE_SMITH_CHART
     case S_GRAPH_SMITH:
     case S_GRAPH_SMITH_AUTO:
-      g_disp.print((uint32_t)rs); g_disp.print(F("+j")); g_disp.println((uint32_t)xs);
+      g_disp.print((uint32_t)rs); 
+        g_disp.print(F("+j")); 
+        g_disp.println((uint32_t)xs);
       g_disp.setCursor(0, SWR_SCREEN_HEIGHT - SWR_SCREEN_CHAR);
       g_disp.print(g_pt.freq_khz);
       swr_list_smith_grid_draw();
