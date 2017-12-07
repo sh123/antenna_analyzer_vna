@@ -13,6 +13,7 @@
 /* --------------------------------------------------------------------------*/
 
 //#define DEBUG_SERIAL
+//#define USE_SMITH_CHART
 
 #define BANDS_CNT         12
 
@@ -280,9 +281,51 @@ void swr_list_grid_draw()
   }
 }
 
+#ifdef USE_SMITH_CHART
+
 void swr_list_smith_grid_draw()
 {
+  g_disp.drawLine(0, SWR_SCREEN_HEIGHT / 2, 
+    SWR_SCREEN_WIDTH, SWR_SCREEN_HEIGHT / 2, BLACK);
+    
+  // R circles: r = 1 / (R + 1); p = (R / (R + 1), 0);
+  for (float i = 0; i <= 2; i += 0.5)
+  {
+    float r = 1.0 / (i + 1.0);
+    float x = i / (i + 1.0);
+    
+    g_disp.drawCircle(
+      SWR_SCREEN_WIDTH / 2 * x + SWR_SCREEN_WIDTH / 2, 
+      SWR_SCREEN_HEIGHT / 2, 
+      SWR_SCREEN_WIDTH / 2 * r, 
+      BLACK);
+    
+  }
+  // X circles: r = 1 / X; p = (1, 1 / X);
+  for (float i = 0.1; i <= 2.0; i += 0.5)
+  {
+    float r = 1.0 / i;
+    float y = 1.0 / i;
+    
+    g_disp.drawCircle(
+      SWR_SCREEN_WIDTH, 
+      SWR_SCREEN_WIDTH / 2 * y + SWR_SCREEN_HEIGHT / 2, 
+      SWR_SCREEN_WIDTH / 2 * r, 
+      BLACK);
+
+    g_disp.drawCircle(
+      SWR_SCREEN_WIDTH, 
+      -SWR_SCREEN_WIDTH / 2 * y + SWR_SCREEN_HEIGHT / 2, 
+      SWR_SCREEN_WIDTH / 2 * r, 
+      BLACK);
+  }
 }
+
+void swr_list_smith_draw()
+{  
+}
+
+#endif // USE_SMITH_CHART
 
 uint8_t swr_screen_normalize(float swr)
 {  
@@ -348,10 +391,6 @@ void swr_list_z_draw()
     prev_rs = rs;
     prev_xs = xs;
   }
-}
-
-void swr_list_smith_draw()
-{  
 }
 
 void swr_list_sweep_and_fill() 
@@ -695,11 +734,16 @@ void screen_select_next()
     case S_GRAPH_Z:
       g_screen_state = S_GRAPH_Z_AUTO;
       break;
-
+      
     case S_GRAPH_Z_AUTO:
+#ifdef USE_SMITH_CHART
       g_screen_state = S_GRAPH_SMITH;
+#else
+      g_screen_state = S_SETTINGS;
+#endif
       break;
-
+      
+#ifdef USE_SMITH_CHART      
     case S_GRAPH_SMITH:
       g_screen_state = S_GRAPH_SMITH_AUTO;
       break;
@@ -707,7 +751,8 @@ void screen_select_next()
     case S_GRAPH_SMITH_AUTO:
       g_screen_state = S_SETTINGS;
       break;
-      
+#endif
+
     case S_SETTINGS:
       g_screen_state = S_MAIN_SCREEN;
       break;
@@ -836,7 +881,8 @@ void process_display_swr()
       swr_list_grid_draw();
       swr_list_z_draw();
       break;
-
+      
+#ifdef USE_SMITH_CHART
     case S_GRAPH_SMITH:
     case S_GRAPH_SMITH_AUTO:
       g_disp.print((uint32_t)rs); g_disp.print(F("+j")); g_disp.println((uint32_t)xs);
@@ -845,7 +891,8 @@ void process_display_swr()
       swr_list_smith_grid_draw();
       swr_list_smith_draw();
       break;
-      
+#endif
+
     case S_SETTINGS:
       settings_draw();
       break;
