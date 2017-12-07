@@ -86,6 +86,8 @@ enum MAIN_SCREEN_STATE
   S_GRAPH_SWR_AUTO,
   S_GRAPH_Z,
   S_GRAPH_Z_AUTO,
+  S_GRAPH_SMITH,
+  S_GRAPH_SMITH_AUTO,
   S_SETTINGS
 };
 
@@ -280,6 +282,10 @@ void swr_list_grid_draw()
   }
 }
 
+void swr_list_smith_grid_draw()
+{
+}
+
 uint8_t swr_screen_normalize(float swr)
 {  
   float swr_norm = swr - 1;
@@ -346,6 +352,9 @@ void swr_list_z_draw()
   }
 }
 
+void swr_list_smith_draw()
+{  
+}
 
 void swr_list_sweep_and_fill() 
 {
@@ -690,9 +699,17 @@ void screen_select_next()
       break;
 
     case S_GRAPH_Z_AUTO:
-      g_screen_state = S_SETTINGS;
+      g_screen_state = S_GRAPH_SMITH;
       break;
 
+    case S_GRAPH_SMITH:
+      g_screen_state = S_GRAPH_SMITH_AUTO;
+      break;
+
+    case S_GRAPH_SMITH_AUTO:
+      g_screen_state = S_SETTINGS;
+      break;
+      
     case S_SETTINGS:
       g_screen_state = S_MAIN_SCREEN;
       break;
@@ -717,12 +734,14 @@ void process_rotary()
     {
       case S_GRAPH_SWR_AUTO:
       case S_GRAPH_Z_AUTO:
+      case S_GRAPH_SMITH_AUTO:
         band_rotate_frequency(dir);
         break;
 
       case S_MAIN_SCREEN:
       case S_GRAPH_SWR:
       case S_GRAPH_Z:
+      case S_GRAPH_SMITH:
         band_rotate_frequency(dir);
         if (rotary_state == DIR_CW) 
           swr_list_shift_right();
@@ -790,7 +809,9 @@ void process_display_swr()
   g_disp.setTextColor(BLACK);
   g_disp.setCursor(0,0);
 
-  if (g_screen_state == S_GRAPH_SWR_AUTO || g_screen_state == S_GRAPH_Z_AUTO)
+  if (g_screen_state == S_GRAPH_SWR_AUTO || 
+      g_screen_state == S_GRAPH_Z_AUTO ||
+      g_screen_state == S_GRAPH_SMITH_AUTO)
   {
       g_disp.print(F("*"));
       swr_list_sweep_and_fill();  
@@ -818,6 +839,15 @@ void process_display_swr()
       swr_list_z_draw();
       break;
 
+    case S_GRAPH_SMITH:
+    case S_GRAPH_SMITH_AUTO:
+      g_disp.print((uint32_t)rs); g_disp.print(F("+j")); g_disp.println((uint32_t)xs);
+      g_disp.setCursor(0, SWR_SCREEN_HEIGHT - SWR_SCREEN_CHAR);
+      g_disp.print(g_pt.freq_khz);
+      swr_list_smith_grid_draw();
+      swr_list_smith_draw();
+      break;
+      
     case S_SETTINGS:
       settings_draw();
       break;
