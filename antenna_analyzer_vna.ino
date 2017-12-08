@@ -282,14 +282,80 @@ void swr_list_grid_draw()
   }
 }
 
+/* --------------------------------------------------------------------------*/
+
 #ifdef USE_SMITH_CHART
+
+// http://paulbourke.net/geometry/circlesphere/tvoght.c
+
+int circle_circle_intersection(float x0, float y0, float r0,
+                               float x1, float y1, float r1,
+                               float *xi, float *yi,
+                               float *xi_prime, float *yi_prime)
+{
+  float a, dx, dy, d, h, rx, ry;
+  float x2, y2;
+
+  /* dx and dy are the vertical and horizontal distances between
+   * the circle centers.
+   */
+  dx = x1 - x0;
+  dy = y1 - y0;
+
+  /* Determine the straight-line distance between the centers. */
+  //d = sqrt((dy*dy) + (dx*dx));
+  d = hypot(dx,dy); // Suggested by Keith Briggs
+
+  /* Check for solvability. */
+  if (d > (r0 + r1))
+  {
+    /* no solution. circles do not intersect. */
+    return 0;
+  }
+  if (d < fabs(r0 - r1))
+  {
+    /* no solution. one circle is contained in the other */
+    return 0;
+  }
+
+  /* 'point 2' is the point where the line through the circle
+   * intersection points crosses the line between the circle
+   * centers.  
+   */
+
+  /* Determine the distance from point 0 to point 2. */
+  a = ((r0*r0) - (r1*r1) + (d*d)) / (2.0 * d) ;
+
+  /* Determine the coordinates of point 2. */
+  x2 = x0 + (dx * a/d);
+  y2 = y0 + (dy * a/d);
+
+  /* Determine the distance from point 2 to either of the
+   * intersection points.
+   */
+  h = sqrt((r0*r0) - (a*a));
+
+  /* Now determine the offsets of the intersection points from
+   * point 2.
+   */
+  rx = -dy * (h/d);
+  ry = dx * (h/d);
+
+  /* Determine the absolute intersection points. */
+  *xi = x2 + rx;
+  *xi_prime = x2 - rx;
+  *yi = y2 + ry;
+  *yi_prime = y2 - ry;
+
+  return 1;
+}
 
 void swr_list_smith_grid_draw()
 {
   g_disp.drawLine(0, SWR_SCREEN_HEIGHT / 2, 
     SWR_SCREEN_WIDTH, SWR_SCREEN_HEIGHT / 2, BLACK);
 
-  static float r_vals PROGMEM = [0.2, 0.5, 1, 2, 5];
+  static const float r_vals[5] PROGMEM = {0.2, 0.5, 1, 2, 5};
       
   // R circles: r = 1 / (R + 1); p = (R / (R + 1), 0);
   for (uint8_t i = 0; i < 5; i++)
@@ -324,10 +390,32 @@ void swr_list_smith_grid_draw()
   }
 }
 
+void swr_smith_pt_from_z(float rs, float xs, uint8_t &x, uint8_t &y)
+{
+    float rs_r = 1.0 / (rs + 1.0);
+    float rs_x = rs / (rs + 1.0);
+
+    if (xs == 0) 
+    {
+      x = SWR_SCREEN_WIDTH / 2;
+      y = SWR_SCREEN_HEIGHT / 2;
+      return;
+    }
+    float xs_r = 1.0 / xs;
+    float xs_y = 1.0 / xs;
+
+    float sect_x1, sect_y1, sect_x2, sect_y2;
+
+    bool is_found = circle_circle_intersection(rs_x, 0, rs_r, 0, xs_y, xs_r, 
+      &sect_x1, &sect_y1, &sect_x2, &sect_y2);
+
+    x = SWR_SCREEN_WIDTH / 2 * sect_x1 + SWR_SCREEN_WIDTH / 2;
+    y = SWR_SCREEN_WIDTH / 2 * y + SWR_SCREEN_HEIGHT / 2;
+}
+
 void swr_list_smith_draw()
 {
-  uint8_t prev_rs;
-  uint8_t prev_xs;
+  uint8_t x, y, prev_x, prev_y;
   
   for (uint8_t i = 0; i < SWR_LIST_SIZE; i++) 
   {
@@ -335,34 +423,22 @@ void swr_list_smith_draw()
     g_pt.phs = g_phs_list[i];
     
     swr_calculate();
-
-    // FIXME
     
-    // R circles: p = (R / (R + 1), 0);
-    float norm_rs = g_pt.rs / 50.0;
-    norm_rs = norm_rs / (norm_rs + 1)
-
-    // X circles: p = (1, 1 / X);
-    float norm_xs = g_pt.xs / 50.0;
-    norm_xs = 1 / norm_xs;
+    swr_smith_pt_from_z(g_pt.rs, g_pt.xs, x, y);
 
     if (i > 0) 
     {
-      g_disp.drawLine(
-        SWR_SCREEN_WIDTH / 2 * norm_rs + SWR_SCREEN_WIDTH / 2, 
-        SWR_SCREEN_WIDTH / 2 * norm_xs + SWR_SCREEN_HEIGHT / 2,
-        SWR_SCREEN_WIDTH / 2 * prev_rs + SWR_SCREEN_WIDTH / 2, 
-        SWR_SCREEN_WIDTH / 2 * prev_xs + SWR_SCREEN_HEIGHT / 2,
-        BLACK);
-      g_disp.drawLine(, BLACK);
+      g_disp.drawLine(prev_x, prev_y, x, y, BLACK);
     }
 
-    prev_rs = norm_rs;
-    prev_xs = norm_xs;
+    prev_x = x;
+    prev_y = y;
   }
 }
 
 #endif // USE_SMITH_CHART
+
+/* --------------------------------------------------------------------------*/
 
 uint8_t swr_screen_normalize(float swr)
 {  
@@ -421,8 +497,10 @@ void swr_list_z_draw()
 
     if (i > 0) 
     {
-      g_disp.drawLine(i - 1, SWR_SCREEN_HEIGHT - prev_rs, i, SWR_SCREEN_HEIGHT - rs, BLACK);
-      g_disp.drawLine(i - 1, SWR_SCREEN_HEIGHT - prev_xs, i, SWR_SCREEN_HEIGHT - xs, BLACK);
+      g_disp.drawLine(i - 1, SWR_SCREEN_HEIGHT - prev_rs, 
+        i, SWR_SCREEN_HEIGHT - rs, BLACK);
+      g_disp.drawLine(i - 1, SWR_SCREEN_HEIGHT - prev_xs, 
+        i, SWR_SCREEN_HEIGHT - xs, BLACK);
     }
 
     prev_rs = rs;
