@@ -288,7 +288,9 @@ void swr_list_smith_grid_draw()
 {
   g_disp.drawLine(0, SWR_SCREEN_HEIGHT / 2, 
     SWR_SCREEN_WIDTH, SWR_SCREEN_HEIGHT / 2, BLACK);
-    
+
+  // TODO, use static values
+      
   // R circles: r = 1 / (R + 1); p = (R / (R + 1), 0);
   for (float i = 0; i <= 2; i += 0.5)
   {
@@ -323,7 +325,39 @@ void swr_list_smith_grid_draw()
 }
 
 void swr_list_smith_draw()
-{  
+{
+  uint8_t prev_rs;
+  uint8_t prev_xs;
+  
+  for (uint8_t i = 0; i < SWR_LIST_SIZE; i++) 
+  {
+    g_pt.amp = g_amp_list[i];
+    g_pt.phs = g_phs_list[i];
+    
+    swr_calculate();
+    
+    // R circles: p = (R / (R + 1), 0);
+    float norm_rs = g_pt.rs / 50.0;
+    norm_rs = norm_rs / (norm_rs + 1)
+
+    // X circles: p = (1, 1 / X);
+    float norm_xs = g_pt.xs / 50.0;
+    norm_xs = 1 / norm_xs;
+
+    if (i > 0) 
+    {
+      g_disp.drawLine(
+        SWR_SCREEN_WIDTH / 2 * norm_rs + SWR_SCREEN_WIDTH / 2, 
+        SWR_SCREEN_WIDTH / 2 * norm_xs + SWR_SCREEN_HEIGHT / 2,
+        SWR_SCREEN_WIDTH / 2 * prev_rs + SWR_SCREEN_WIDTH / 2, 
+        SWR_SCREEN_WIDTH / 2 * prev_xs + SWR_SCREEN_HEIGHT / 2,
+        BLACK);
+      g_disp.drawLine(, BLACK);
+    }
+
+    prev_rs = norm_rs;
+    prev_xs = norm_xs;
+  }
 }
 
 #endif // USE_SMITH_CHART
