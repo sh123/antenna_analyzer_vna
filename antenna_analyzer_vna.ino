@@ -410,7 +410,7 @@ void swr_smith_pt_from_z(float rs, float xs, uint8_t &x, uint8_t &y)
       &sect_x1, &sect_y1, &sect_x2, &sect_y2);
 
     x = SWR_SCREEN_WIDTH / 2 * sect_x1 + SWR_SCREEN_WIDTH / 2;
-    y = SWR_SCREEN_WIDTH / 2 * y + SWR_SCREEN_HEIGHT / 2;
+    y = SWR_SCREEN_WIDTH / 2 * sect_y1 + SWR_SCREEN_HEIGHT / 2;
 }
 
 void swr_list_smith_draw()
