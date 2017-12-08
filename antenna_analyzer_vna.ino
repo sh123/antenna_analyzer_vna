@@ -60,6 +60,7 @@
 
 #define SWR_GRID_COUNT_Y  SWR_MAX_VALUE
 #define SWR_GRID_STEP_Y   SWR_GRAPH_HEIGHT / SWR_GRID_COUNT_Y
+#define SWR_GRID_SMITH    5
 
 // generator related
 #define FREQ_STEP_INC     5000
@@ -172,6 +173,9 @@ uint32_t g_freq_min;
 struct measurement_t g_pt;
 int16_t g_amp_list[SWR_LIST_SIZE];
 int16_t g_phs_list[SWR_LIST_SIZE];
+#ifdef USE_SMITH_CHART
+const float g_smith_grid[SWR_GRID_SMITH] = {0.2, 0.5, 1.0, 2.0, 5.0};
+#endif
 
 // UI state
 bool g_do_update = true;
@@ -284,6 +288,8 @@ void swr_list_grid_draw()
 
 /* --------------------------------------------------------------------------*/
 
+// NOTE, experimental, just for fun, does not look good on small screen
+
 #ifdef USE_SMITH_CHART
 
 // http://paulbourke.net/geometry/circlesphere/tvoght.c
@@ -296,52 +302,30 @@ int circle_circle_intersection(float x0, float y0, float r0,
   float a, dx, dy, d, h, rx, ry;
   float x2, y2;
 
-  /* dx and dy are the vertical and horizontal distances between
-   * the circle centers.
-   */
   dx = x1 - x0;
   dy = y1 - y0;
 
-  /* Determine the straight-line distance between the centers. */
   //d = sqrt((dy*dy) + (dx*dx));
   d = hypot(dx,dy); // Suggested by Keith Briggs
 
-  /* Check for solvability. */
   if (d > (r0 + r1))
   {
-    /* no solution. circles do not intersect. */
     return 0;
   }
   if (d < fabs(r0 - r1))
   {
-    /* no solution. one circle is contained in the other */
     return 0;
   }
-
-  /* 'point 2' is the point where the line through the circle
-   * intersection points crosses the line between the circle
-   * centers.  
-   */
-
-  /* Determine the distance from point 0 to point 2. */
   a = ((r0*r0) - (r1*r1) + (d*d)) / (2.0 * d) ;
 
-  /* Determine the coordinates of point 2. */
   x2 = x0 + (dx * a/d);
   y2 = y0 + (dy * a/d);
 
-  /* Determine the distance from point 2 to either of the
-   * intersection points.
-   */
   h = sqrt((r0*r0) - (a*a));
 
-  /* Now determine the offsets of the intersection points from
-   * point 2.
-   */
   rx = -dy * (h/d);
   ry = dx * (h/d);
 
-  /* Determine the absolute intersection points. */
   *xi = x2 + rx;
   *xi_prime = x2 - rx;
   *yi = y2 + ry;
@@ -354,27 +338,25 @@ void swr_list_smith_grid_draw()
 {
   g_disp.drawLine(0, SWR_SCREEN_HEIGHT / 2, 
     SWR_SCREEN_WIDTH, SWR_SCREEN_HEIGHT / 2, BLACK);
-
-  static const float r_vals[5] PROGMEM = {0.2, 0.5, 1, 2, 5};
       
   // R circles: r = 1 / (R + 1); p = (R / (R + 1), 0);
-  for (uint8_t i = 0; i < 5; i++)
+  for (uint8_t i = 0; i < SWR_GRID_SMITH; i++)
   {
-    float r = 1.0 / (r_vals[i] + 1.0);
-    float x = r_vals[i] / (r_vals[i] + 1.0);
-    
+    float r = 1.0 / (g_smith_grid[i] + 1.0);
+    float x = g_smith_grid[i] / (g_smith_grid[i] + 1.0);
+
     g_disp.drawCircle(
       SWR_SCREEN_WIDTH / 2 * x + SWR_SCREEN_WIDTH / 2, 
       SWR_SCREEN_HEIGHT / 2, 
       SWR_SCREEN_WIDTH / 2 * r, 
       BLACK);
-    
   }
+  
   // X circles: r = 1 / X; p = (1, 1 / X);
-  for (uint8_t i = 0; i < 5; i++)
+  for (uint8_t i = 0; i < SWR_GRID_SMITH; i++)
   {
-    float r = 1.0 / r_vals[i];
-    float y = 1.0 / r_vals[i];
+    float r = 1.0 / g_smith_grid[i];
+    float y = 1.0 / g_smith_grid[i];
     
     g_disp.drawCircle(
       SWR_SCREEN_WIDTH, 
@@ -392,8 +374,8 @@ void swr_list_smith_grid_draw()
 
 void swr_smith_pt_from_z(float rs, float xs, uint8_t &x, uint8_t &y)
 {
-    float rs_r = 1.0 / (rs + 1.0);
-    float rs_x = rs / (rs + 1.0);
+    float rs_r = 1.0 / (rs / 50.0 + 1.0);
+    float rs_x = (rs / 50.0) / (rs / 50.0 + 1.0);
 
     if (xs == 0) 
     {
@@ -401,8 +383,9 @@ void swr_smith_pt_from_z(float rs, float xs, uint8_t &x, uint8_t &y)
       y = SWR_SCREEN_HEIGHT / 2;
       return;
     }
-    float xs_r = 1.0 / xs;
-    float xs_y = 1.0 / xs;
+    
+    float xs_r = 1.0 / (xs / 50.0);
+    float xs_y = 1.0 / (xs / 50.0);
 
     float sect_x1, sect_y1, sect_x2, sect_y2;
 
