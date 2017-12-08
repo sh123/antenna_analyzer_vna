@@ -289,13 +289,13 @@ void swr_list_smith_grid_draw()
   g_disp.drawLine(0, SWR_SCREEN_HEIGHT / 2, 
     SWR_SCREEN_WIDTH, SWR_SCREEN_HEIGHT / 2, BLACK);
 
-  // TODO, use static values
+  static float r_vals PROGMEM = [0.2, 0.5, 1, 2, 5];
       
   // R circles: r = 1 / (R + 1); p = (R / (R + 1), 0);
-  for (float i = 0; i <= 2; i += 0.5)
+  for (uint8_t i = 0; i < 5; i++)
   {
-    float r = 1.0 / (i + 1.0);
-    float x = i / (i + 1.0);
+    float r = 1.0 / (r_vals[i] + 1.0);
+    float x = r_vals[i] / (r_vals[i] + 1.0);
     
     g_disp.drawCircle(
       SWR_SCREEN_WIDTH / 2 * x + SWR_SCREEN_WIDTH / 2, 
@@ -305,10 +305,10 @@ void swr_list_smith_grid_draw()
     
   }
   // X circles: r = 1 / X; p = (1, 1 / X);
-  for (float i = 0.1; i <= 2.0; i += 0.5)
+  for (uint8_t i = 0; i < 5; i++)
   {
-    float r = 1.0 / i;
-    float y = 1.0 / i;
+    float r = 1.0 / r_vals[i];
+    float y = 1.0 / r_vals[i];
     
     g_disp.drawCircle(
       SWR_SCREEN_WIDTH, 
@@ -335,6 +335,8 @@ void swr_list_smith_draw()
     g_pt.phs = g_phs_list[i];
     
     swr_calculate();
+
+    // FIXME
     
     // R circles: p = (R / (R + 1), 0);
     float norm_rs = g_pt.rs / 50.0;
