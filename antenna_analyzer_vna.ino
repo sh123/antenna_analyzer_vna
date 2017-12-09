@@ -105,7 +105,7 @@ enum SETTINGS_SCREEN_STATE
   S_SETTINGS_CAL_50OHM,
   S_SETTINGS_CAL_OPEN,
   S_SETTINGS_CAL_SHORT,
-  S_SETTINGS_CAL_DEFAULT,
+  S_SETTINGS_CAL_DEFAULT
 };
 
 /* --------------------------------------------------------------------------*/
