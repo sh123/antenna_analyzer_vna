@@ -8,6 +8,7 @@
 #include <AD9850.h>
 #include <Rotary.h>
 #include <SimpleTimer.h>
+#include <EEPROM.h>
 #include "Wire.h"
 
 /* --------------------------------------------------------------------------*/
@@ -39,10 +40,13 @@
 #define PIN_PCD_CS        4
 #define PIN_PCD_RST       3
 
+// EEPROM addresses
+#define EEPROM_CONTRAST   0
+
 // swr related parameters
 #define SWR_MAX           9999
 
-#define SWR_SCREEN_CNTRST 60
+#define SWR_SCREEN_CONTRAST 60
 #define SWR_SCREEN_HEIGHT 48
 #define SWR_SCREEN_WIDTH  84
 
@@ -178,6 +182,7 @@ const float g_smith_grid[SWR_GRID_SMITH] = {0.2, 0.5, 1.0, 2.0, 5.0};
 #endif
 
 // UI state
+uint8_t g_contrast = SWR_SCREEN_CONTRAST;
 bool g_do_update = true;
 MAIN_SCREEN_STATE g_screen_state = S_MAIN_SCREEN;
 
@@ -200,11 +205,7 @@ void setup()
   Serial.begin(9600);
 #endif
 
-  // from AD8302 gain/phase detector
-  analogReference(EXTERNAL) ;
-  analogRead(PIN_SWR_AMP);
-  analogRead(PIN_SWR_PHS);
- 
+  reflectometer_initialize();
   generator_initialize();
 
   swr_list_clear(); 
@@ -218,9 +219,17 @@ void setup()
   //attachInterrupt(digitalPinToInterrupt(PIN_ROTARY_BTN), process_rotary_button, CHANGE);
   //attachInterrupt(digitalPinToInterrupt(PIN_ROTARY_CLK), process_rotary, CHANGE);
 
-  g_disp.begin();
-  g_disp.setContrast(SWR_SCREEN_CNTRST);
-  g_disp.display();
+  screen_initialize();
+}
+
+/* --------------------------------------------------------------------------*/
+
+void reflectometer_initialize()
+{  
+  // from AD8302 gain/phase detector
+  analogReference(EXTERNAL) ;
+  analogRead(PIN_SWR_AMP);
+  analogRead(PIN_SWR_PHS);
 }
 
 /* --------------------------------------------------------------------------*/
@@ -234,6 +243,43 @@ void generator_set_frequency(uint32_t freq)
 {
   DDS.setfreq(freq, 0);
   delay(FREQ_DELAY_MS);
+}
+
+/* --------------------------------------------------------------------------*/
+
+void screen_initialize()
+{  
+  g_disp.begin();
+  screen_load_settings();
+  g_disp.display();
+}
+
+void screen_rotate_contrast(int8_t dir)
+{
+  g_contrast += dir;
+  g_disp.setContrast(g_contrast);
+}
+
+void screen_load_settings()
+{  
+  EEPROM.get(EEPROM_CONTRAST, g_contrast);
+  if (g_contrast == 0 || g_contrast == 255)
+  {
+    g_contrast = SWR_SCREEN_CONTRAST;
+    EEPROM.put(EEPROM_CONTRAST, g_contrast);
+  }
+  g_disp.setContrast(g_contrast);  
+}
+
+void screen_save_settings()
+{
+  uint8_t contrast;
+  EEPROM.get(EEPROM_CONTRAST, contrast);
+  
+  if (contrast != g_contrast) 
+  {
+    EEPROM.put(EEPROM_CONTRAST, g_contrast);
+  }
 }
 
 /* --------------------------------------------------------------------------*/
@@ -687,7 +733,7 @@ void settings_draw()
     case S_SETTINGS_CONTRAST:
       g_disp.println(F("<CONTRAST>\n"));
       g_disp.print(F("CONTRAST: "));
-        g_disp.println(SWR_SCREEN_CNTRST);
+        g_disp.println(g_contrast);
       break;
           
     case S_SETTINGS_CAL_50OHM:
@@ -780,6 +826,7 @@ void settings_rotate_screen(int8_t dir)
 
 void settings_save()
 {  
+  screen_save_settings();
 }
 
 void settings_rotate(int8_t dir)
@@ -793,6 +840,7 @@ void settings_rotate(int8_t dir)
         break;
 
       case S_SETTINGS_CONTRAST:
+        screen_rotate_contrast(dir);
         break;
         
       case S_SETTINGS_CAL_50OHM:
@@ -934,12 +982,22 @@ void process_rotary_button()
           
         default:
           band_select_next(); 
-          g_do_update = true;
           break;
       }
+      g_do_update = true;
       break;
 
     case BTN_PRESSED_LONG:
+
+      switch (g_screen_state)
+      {
+        case S_SETTINGS:
+          settings_process_button();
+          break;
+          
+         default:
+          break;
+      }
       screen_select_next();
       g_do_update = true;
       break;
