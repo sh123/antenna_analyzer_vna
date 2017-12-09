@@ -104,7 +104,8 @@ enum SETTINGS_SCREEN_STATE
   S_SETTINGS_CONTRAST,
   S_SETTINGS_CAL_50OHM,
   S_SETTINGS_CAL_OPEN,
-  S_SETTINGS_CAL_SHORT
+  S_SETTINGS_CAL_SHORT,
+  S_SETTINGS_CAL_DEFAULT,
 };
 
 /* --------------------------------------------------------------------------*/
@@ -748,6 +749,10 @@ void settings_draw()
       g_disp.println(F("<CAL SHORT>\n"));
       break;
 
+    case S_SETTINGS_CAL_DEFAULT:
+      g_disp.println(F("<CAL DEFAULT>\n"));
+      break;
+      
     default:
       break;
       
@@ -775,9 +780,13 @@ void settings_select_next_screen()
       break;
       
     case S_SETTINGS_CAL_SHORT:
-      g_settings_screen_state = S_SETTINGS_STEP;
+      g_settings_screen_state = S_SETTINGS_CAL_DEFAULT;
       break;
 
+    case S_SETTINGS_CAL_DEFAULT:
+      g_settings_screen_state = S_SETTINGS_STEP;
+      break;
+      
     default:
       break;
   }
@@ -788,7 +797,7 @@ void settings_select_prev_screen()
   switch (g_settings_screen_state)
   {
     case S_SETTINGS_STEP:
-      g_settings_screen_state = S_SETTINGS_CAL_SHORT;
+      g_settings_screen_state = S_SETTINGS_CAL_DEFAULT;
       break;
 
     case S_SETTINGS_CONTRAST:
@@ -807,6 +816,10 @@ void settings_select_prev_screen()
       g_settings_screen_state = S_SETTINGS_CAL_OPEN;
       break;
 
+    case S_SETTINGS_CAL_DEFAULT:
+      g_settings_screen_state = S_SETTINGS_CAL_SHORT;
+      break;
+      
     default:
       break;
   }
@@ -850,6 +863,9 @@ void settings_rotate(int8_t dir)
         break;
 
       case S_SETTINGS_CAL_SHORT:
+        break;
+
+      case S_SETTINGS_CAL_DEFAULT:
         break;
         
       default:
