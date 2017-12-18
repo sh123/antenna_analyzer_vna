@@ -1,7 +1,5 @@
 # antenna_analyzer_vna
 
-![alt text](https://i62.servimg.com/u/f62/19/62/65/46/img_2036.jpg)
-
 Arduino 160 to 6m band VNA antenna analyzer based on AD9850 module.
 
 Influenced by 
@@ -39,3 +37,5 @@ Supported operations:
  * Real time graph screen - shows partially updated SWR plot, plot is updated while user is changing the frequency using encoder, plot is shifted left or right depending on frequency change direction.
  * Frequency sweep screen - shows complete SWR plot, which is updated approximately every second.
  * Frequency step change screen - enables user to change frequency step, which affects both rotary encoder changes and sweep screen.
+ 
+ ![alt text](https://i62.servimg.com/u/f62/19/62/65/46/img_2036.jpg)
