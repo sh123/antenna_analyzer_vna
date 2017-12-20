@@ -37,8 +37,8 @@ Supported operations:
  * Details screen - shows various numeric parameters, such as forward/reflected signals, current frequency/band. By rotating rotary encoder user can change the frequency. By short press - change the band, by long press go to next screen.
  * Real time SWR graph screen - shows partially updated SWR plot, plot is updated while user is changing the frequency using encoder, plot is shifted left or right depending on frequency change direction.
  * Frequency sweep screen - shows complete SWR plot, which is updated approximately every second.
- * Real time impedance graph screen - shows read and imaginary part of impedance on the same screen, partical graph update while user is changing frequency.
- * Impedance sweep screen - impedance graph is updated every second. 
+ * Real time impedance graph screen - shows real and imaginary part of impedance graphs on the same screen, partical graph update while user is changing frequency with rotary encoder.
+ * Impedance sweep screen - impedance graph is updated every second periodically.
  * Settings screen - enables user to change frequency step, which affects both rotary encoder changes and sweep screen, screen contrast, perform calibration.
  
  ![alt text](https://i62.servimg.com/u/f62/19/62/65/46/img_2036.jpg)
