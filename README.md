@@ -41,4 +41,10 @@ Supported operations:
  * Impedance sweep screen - impedance graph is updated every second periodically.
  * Settings screen - enables user to change frequency step, which affects both rotary encoder changes and sweep screen, screen contrast, perform calibration.
  
+ Prototype photos:
+ -----------------
+ ![alt text](https://i62.servimg.com/u/f62/19/62/65/46/img_2035.jpg)
+ 
  ![alt text](https://i62.servimg.com/u/f62/19/62/65/46/img_2036.jpg)
+ 
+ ![alt text](https://i62.servimg.com/u/f62/19/62/65/46/img_2054.jpg)
