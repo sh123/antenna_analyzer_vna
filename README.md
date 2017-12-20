@@ -1,6 +1,6 @@
 # antenna_analyzer_vna
 
-Pocket Arduino Nano 160 to 6m band VNA antenna analyzer based on AD9850 module for field days.
+Pocket Arduino Nano 160 to 6m band VNA antenna analyzer based on AD9850 module for field days. Powered from 9V PP3 battery.
 
 Influenced by 
 * http://ra4nal.qrz.ru/vna.shtml
