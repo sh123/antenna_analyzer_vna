@@ -9,6 +9,8 @@ Influenced by
 Arudino VNA Antenna Analyzer
 ============================
 
+![alt text](https://i62.servimg.com/u/f62/19/62/65/46/img_2035.jpg)
+
 Introduction
 ------------
 Pocket Arduino Nano based antenna VNA analyzer / plotter can be used to measure antenna
@@ -43,7 +45,6 @@ Supported operations:
  
  Prototype photos:
  -----------------
- ![alt text](https://i62.servimg.com/u/f62/19/62/65/46/img_2035.jpg)
  
  ![alt text](https://i62.servimg.com/u/f62/19/62/65/46/img_2036.jpg)
  
