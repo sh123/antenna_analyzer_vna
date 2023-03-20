@@ -1,5 +1,6 @@
 # antenna_analyzer_vna
-Arduino 160 to 6m band VNA antenna analyzer based on AD9850 module.
+
+Pocket Arduino Nano 160 to 6m band VNA antenna analyzer based on AD9850 module for field days. Powered from 9V PP3 battery.
 
 Influenced by 
 * http://ra4nal.qrz.ru/vna.shtml
@@ -8,10 +9,13 @@ Influenced by
 Arudino VNA Antenna Analyzer
 ============================
 
+![alt text](https://i62.servimg.com/u/f62/19/62/65/46/img_2035.jpg)
+
 Introduction
 ------------
-Arduino based antenna VNA analyzer / plotter can be used to measure antenna
-SWR from 160m band up to 6m band, real/complex impedance, return loss (s11).
+Pocket Arduino Nano based antenna VNA analyzer / plotter can be used to measure antenna
+SWR from 160m band up to 6m band, real/complex impedance, return loss (s11), draw SWR chart,
+draw impedance chart.
 
 Next peripherals are in use:
 
@@ -33,6 +37,15 @@ Requirements:
 Supported operations:
 ---------------------
  * Details screen - shows various numeric parameters, such as forward/reflected signals, current frequency/band. By rotating rotary encoder user can change the frequency. By short press - change the band, by long press go to next screen.
- * Real time graph screen - shows partially updated SWR plot, plot is updated while user is changing the frequency using encoder, plot is shifted left or right depending on frequency change direction.
+ * Real time SWR graph screen - shows partially updated SWR plot, plot is updated while user is changing the frequency using encoder, plot is shifted left or right depending on frequency change direction.
  * Frequency sweep screen - shows complete SWR plot, which is updated approximately every second.
- * Frequency step change screen - enables user to change frequency step, which affects both rotary encoder changes and sweep screen.
+ * Real time impedance graph screen - shows real and imaginary part of impedance graphs on the same screen, partical graph update while user is changing frequency with rotary encoder.
+ * Impedance sweep screen - impedance graph is updated every second periodically.
+ * Settings screen - enables user to change frequency step, which affects both rotary encoder changes and sweep screen, screen contrast, perform calibration.
+ 
+ Prototype photos:
+ -----------------
+ 
+ ![alt text](https://i62.servimg.com/u/f62/19/62/65/46/img_2036.jpg)
+ 
+ ![alt text](https://i62.servimg.com/u/f62/19/62/65/46/img_2054.jpg)
