@@ -1,13 +1,11 @@
 # Arduino antenna analyzer for HF bands
+============================
 
 Pocket Arduino Nano 160 to 6m band VNA antenna analyzer based on AD9850 module for field days. Powered from 9V PP3 battery.
 
 Influenced by 
 * http://ra4nal.qrz.ru/vna.shtml
 * https://hamprojects.wordpress.com/2016/02/21/hf-arduino-vna-english-version/
-
-Arudino VNA Antenna Analyzer
-============================
 
 Introduction
 ------------
