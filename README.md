@@ -26,13 +26,9 @@ Next peripherals are in use:
  * Reflectometer and attenuators as per - https://hamprojects.wordpress.com/2016/02/21/hf-arduino-vna-english-version/
  * Rotary encoder
  
-Requirements:
--------------
- * AD9850 from F4GOJ - https://github.com/F4GOJ/AD9850
- * Rotary encoder library modified fork - https://github.com/sh123/Rotary/tree/rotary_button
- * Simple Timer library - https://github.com/jfturcot/SimpleTimer
- * Adafruit PCD8544 (from Arduino library)- https://github.com/adafruit/Adafruit-PCD8544-Nokia-5110-LCD-library
- * Adafruit GFX (from Arduino library) - https://github.com/adafruit/Adafruit-GFX-Library
+Building:
+---------
+Use platformio to build and upload.
 
 Supported operations:
 ---------------------
@@ -43,9 +39,3 @@ Supported operations:
  * Impedance sweep screen - impedance graph is updated every second periodically.
  * Settings screen - enables user to change frequency step, which affects both rotary encoder changes and sweep screen, screen contrast, perform calibration.
  
- Prototype photos:
- -----------------
- 
- ![alt text](https://i62.servimg.com/u/f62/19/62/65/46/img_2036.jpg)
- 
- ![alt text](https://i62.servimg.com/u/f62/19/62/65/46/img_2054.jpg)
